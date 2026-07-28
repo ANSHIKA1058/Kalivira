@@ -13,4 +13,11 @@ public class FileController {
     public String uploadFile(@RequestParam MultipartFile file,@RequestParam String password){
         return fileService.uploadFile(file, password);
     }
+    @GetMapping("/download")
+    public byte[] downloadFile(
+            @RequestParam String filename,
+            @RequestParam String password) {
+        return fileService.downloadFile(filename, password);
+    }
+
 }

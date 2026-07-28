@@ -23,4 +23,12 @@ public class AESUtil {
         return cipher.doFinal(data);
 
     }
+
+    //decrypt file data
+    public static byte[] decrypt(byte[] encryptedData, String password) throws Exception{
+        SecretKey key = generateKey(password);
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.DECRYPT_MODE,key);
+        return cipher.doFinal(encryptedData);
+    }
 }

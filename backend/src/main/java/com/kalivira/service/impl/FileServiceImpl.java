@@ -29,4 +29,19 @@ public class FileServiceImpl implements FileService {
         }
 
     }
+
+    @Override
+    public byte[] downloadFile(String filename, String password){
+        try{
+            //encrypted file read
+            Path path = Paths.get("storage",filename);
+            byte[] encryptedBytes = Files.readAllBytes(path);
+            //decrypt
+            byte[] decryptedBytes = AESUtil.decrypt(encryptedBytes, password);
+            return decryptedBytes;
+        }catch (Exception e){
+            e.printStackTrace();
+            return null;
+        }
+    }
 }
