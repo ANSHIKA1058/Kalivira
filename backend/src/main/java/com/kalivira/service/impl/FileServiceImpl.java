@@ -6,9 +6,17 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import com.kalivira.entity.FileEntity;
+import com.kalivira.repository.FileRepository;
+import java.time.LocalDateTime;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class FileServiceImpl implements FileService {
+
+    @Autowired
+    private FileRepository fileRepository;
+
 
     @Override
     public String uploadFile(MultipartFile file, String password) {
@@ -22,8 +30,17 @@ public class FileServiceImpl implements FileService {
             //save encrypted file
             Files.write(path,encryptedBytes);
 
+            FileEntity fileEntity=new FileEntity();
+            fileEntity.setOriginalName(file.getOriginalFilename());
+            fileEntity.setEncryptedName(file.getOriginalFilename()+".enc");
+            fileEntity.setFileSize(file.getSize());
+            fileEntity.setUploadTime(LocalDateTime.now());
+            fileRepository.save(fileEntity);
+
             return "File Encrypted Successfully";
-        } catch (Exception e){
+
+        }
+        catch (Exception e){
             e.printStackTrace();
             return "Encryption Failed";
         }
@@ -44,4 +61,6 @@ public class FileServiceImpl implements FileService {
             return null;
         }
     }
+
+
 }
