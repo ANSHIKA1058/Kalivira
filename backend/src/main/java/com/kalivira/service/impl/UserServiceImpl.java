@@ -5,6 +5,7 @@ import com.kalivira.entity.UserEntity;
 import com.kalivira.repository.UserRepository;
 import com.kalivira.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,9 @@ import java.time.LocalDateTime;
 public class UserServiceImpl implements UserService {
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
 
 
     @Override
@@ -26,7 +30,7 @@ public class UserServiceImpl implements UserService {
         UserEntity user = new UserEntity();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole("USER");
         user.setCreatedAt(LocalDateTime.now());
 

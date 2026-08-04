@@ -67,6 +67,7 @@
 			<scope>runtime</scope>
 		</dependency>
 
+<!--bcrypt deendency-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
