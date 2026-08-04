@@ -1,6 +1,7 @@
 package com.kalivira.service.impl;
 
 import com.kalivira.dto.RegisterRequest;
+import com.kalivira.dto.LoginRequest;
 import com.kalivira.entity.UserEntity;
 import com.kalivira.repository.UserRepository;
 import com.kalivira.service.UserService;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.time.LocalDateTime;
 @Service
 public class UserServiceImpl implements UserService {
@@ -39,5 +41,23 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
         return "User Registered Successfully";
 
+    }
+
+    @Override
+    public String login(LoginRequest request){
+
+        //Email search
+        Optional<UserEntity> userOptional = userRepository.findByEmail(request.getEmail());
+
+        if(userOptional.isEmpty()){
+            return "Email not found";
+        }
+        UserEntity user = userOptional.get();
+
+        //password verify
+        if(!passwordEncoder.matches(request.getPassword(),user.getPassword())){
+            return "Invalid Password";
+        }
+        return "Login Successful";
     }
 }
