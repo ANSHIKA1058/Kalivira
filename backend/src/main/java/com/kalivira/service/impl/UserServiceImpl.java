@@ -8,6 +8,7 @@ import com.kalivira.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.kalivira.util.JwtUtil;
 
 import java.util.Optional;
 import java.time.LocalDateTime;
@@ -18,6 +19,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
 
     @Override
@@ -58,6 +62,8 @@ public class UserServiceImpl implements UserService {
         if(!passwordEncoder.matches(request.getPassword(),user.getPassword())){
             return "Invalid Password";
         }
-        return "Login Successful";
+
+        String token = jwtUtil.generateToken(user.getEmail());
+        return token;
     }
 }
