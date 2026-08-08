@@ -3,6 +3,8 @@ import com.kalivira.service.FileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -14,23 +16,49 @@ public class FileController {
     @Autowired
     private FileService fileService;
 
-    @PostMapping("/upload")
-    public String uploadFile(@RequestParam MultipartFile file,@RequestParam String password){
-        return fileService.uploadFile(file, password);
+    @PostMapping(
+            value = "/upload",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public String uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("password") String password
+    ){
+        return fileService.uploadFile(file,password);
     }
     @GetMapping("/download")
-    public ResponseEntity<Resource> downloadFile(
-            @RequestParam String filename,
-            @RequestParam String password){
-        byte[] data = fileService.downloadFile(filename, password);
-        ByteArrayResource resource = new ByteArrayResource(data);
-        return ResponseEntity.ok().
-                header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\""+filename.replace(".enc", "")+"\"")
-                .contentLength(data.length)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
+    public ResponseEntity<?> downloadFile(
+            @RequestParam("filename") String filename,
+            @RequestParam("password") String password) {
+
+        try {
+
+            byte[] data = fileService.downloadFile(filename, password);
+
+            ByteArrayResource resource = new ByteArrayResource(data);
+
+            return ResponseEntity.ok()
+                    .header(
+                            HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" +
+                                    filename.replace(".enc", "") +
+                                    "\""
+                    )
+                    .contentLength(data.length)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body("Invalid password");
+
+        } catch (Exception e) {
+
+            return ResponseEntity
+                    .internalServerError()
+                    .body("Something went wrong while downloading the file");
+        }
     }
-
-
 }

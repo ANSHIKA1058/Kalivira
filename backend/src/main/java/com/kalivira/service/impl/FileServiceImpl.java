@@ -10,6 +10,7 @@ import com.kalivira.entity.FileEntity;
 import com.kalivira.repository.FileRepository;
 import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.kalivira.exception.InvalidPasswordException;
 
 @Service
 public class FileServiceImpl implements FileService {
@@ -23,10 +24,15 @@ public class FileServiceImpl implements FileService {
         try{
             //converting file into bytes
             byte[] fileBytes = file.getBytes();
-            //encryption with aes
-            byte[] encryptedBytes= AESUtil.encrypt(fileBytes, password);
+
+            System.out.println("Original Size = " + fileBytes.length);
+
+            byte[] encryptedBytes = AESUtil.encrypt(fileBytes, password);
+
+            System.out.println("Encrypted Size = " + encryptedBytes.length);
             //path of storage folder
             Path path = Paths.get("storage", file.getOriginalFilename()+".enc");
+            System.out.println("Upload Path = " + path.toAbsolutePath());
             //save encrypted file
             Files.write(path,encryptedBytes);
 
@@ -51,15 +57,20 @@ public class FileServiceImpl implements FileService {
     public byte[] downloadFile(String filename, String password){
         try{
             //encrypted file read
-            Path path = Paths.get("storage",filename);
+            Path path = Paths.get("storage", filename);
+
+            System.out.println("Download Path = " + path.toAbsolutePath());
+
             byte[] encryptedBytes = Files.readAllBytes(path);
+
+            System.out.println("Read Encrypted Size = " + encryptedBytes.length);
             //decrypt
             byte[] decryptedBytes = AESUtil.decrypt(encryptedBytes, password);
             return decryptedBytes;
         }catch (Exception e){
-            e.printStackTrace();
-            return null;
+            throw new InvalidPasswordException("Invalid password or unable to decrypt file");
         }
+
     }
 
 

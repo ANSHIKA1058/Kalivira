@@ -1,34 +1,124 @@
 package com.kalivira.util;
+
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.util.Arrays;
-import java.security.MessageDigest;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 
 public class AESUtil {
 
-    //converting password in aes key
-    public static SecretKey generateKey(String password) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");//32 bytes
-        byte[] key = digest.digest(password.getBytes("UTF-8"));
-        key = Arrays.copyOf(key, 16);//16byte = 128 bits
-        return new SecretKeySpec(key, "AES");
+    private static final int SALT_LENGTH = 16;       // 128 bits
+    private static final int IV_LENGTH = 12;         // 96 bits - for GCM
+    private static final int KEY_LENGTH = 256;       // AES-256
+    private static final int TAG_LENGTH = 128;       // GCM authentication tag
+    private static final int ITERATIONS = 600_000;
+
+    // Generate AES-256 key from password using PBKDF2
+    private static SecretKey generateKey(String password, byte[] salt)
+            throws Exception {
+
+        PBEKeySpec spec = new PBEKeySpec(
+                password.toCharArray(),
+                salt,
+                ITERATIONS,
+                KEY_LENGTH
+        );
+
+        SecretKeyFactory factory =
+                SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+
+        byte[] keyBytes = factory.generateSecret(spec).getEncoded();
+
+        return new SecretKeySpec(keyBytes, "AES");
     }
 
-    //encrypt file data
-    public static byte[] encrypt(byte[] data,String password) throws Exception {
-        SecretKey secretKey = generateKey(password);
-        Cipher cipher = Cipher.getInstance("AES");
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-        return cipher.doFinal(data);
+    // Encrypt file data
+    public static byte[] encrypt(byte[] data, String password)
+            throws Exception {
 
+        SecureRandom secureRandom = new SecureRandom();
+
+        // Generate random salt
+        byte[] salt = new byte[SALT_LENGTH];
+        secureRandom.nextBytes(salt);
+
+        // Generate random IV
+        byte[] iv = new byte[IV_LENGTH];
+        secureRandom.nextBytes(iv);
+
+        // Generate AES-256 key
+        SecretKey secretKey = generateKey(password, salt);
+
+        // AES-256-GCM
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+
+        GCMParameterSpec gcmSpec =
+                new GCMParameterSpec(TAG_LENGTH, iv);
+
+        cipher.init(
+                Cipher.ENCRYPT_MODE,
+                secretKey,
+                gcmSpec
+        );
+
+        // Encrypt + authentication tag
+        byte[] encryptedData = cipher.doFinal(data);
+
+        // Store:
+        // [salt][iv][encrypted data + authentication tag]
+        ByteBuffer buffer = ByteBuffer.allocate(
+                SALT_LENGTH +
+                        IV_LENGTH +
+                        encryptedData.length
+        );
+
+        buffer.put(salt);
+        buffer.put(iv);
+        buffer.put(encryptedData);
+
+        return buffer.array();
     }
 
-    //decrypt file data
-    public static byte[] decrypt(byte[] encryptedData, String password) throws Exception{
-        SecretKey key = generateKey(password);
-        Cipher cipher = Cipher.getInstance("AES");
-        cipher.init(Cipher.DECRYPT_MODE,key);
-        return cipher.doFinal(encryptedData);
+    // Decrypt file data
+    public static byte[] decrypt(byte[] encryptedData, String password)
+            throws Exception {
+
+        ByteBuffer buffer = ByteBuffer.wrap(encryptedData);
+
+        // Extract salt
+        byte[] salt = new byte[SALT_LENGTH];
+        buffer.get(salt);
+
+        // Extract IV
+        byte[] iv = new byte[IV_LENGTH];
+        buffer.get(iv);
+
+        // Extract encrypted content + authentication tag
+        byte[] cipherText = new byte[buffer.remaining()];
+        buffer.get(cipherText);
+
+        // Generate same AES-256 key
+        SecretKey secretKey = generateKey(password, salt);
+
+        // AES-GCM
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+
+        GCMParameterSpec gcmSpec =
+                new GCMParameterSpec(TAG_LENGTH, iv);
+
+        cipher.init(
+                Cipher.DECRYPT_MODE,
+                secretKey,
+                gcmSpec
+        );
+
+        //wrong pass fails
+        return cipher.doFinal(cipherText);
     }
 }
