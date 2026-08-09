@@ -129,4 +129,37 @@ public class FileServiceImpl implements FileService {
                 ))
                 .toList();
     }
+
+    @Override
+    public void deleteFile(String filename) {
+
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        FileEntity fileEntity = fileRepository
+                .findByEncryptedNameAndUser(filename, user)
+                .orElseThrow(() ->
+                        new RuntimeException("File not found or access denied")
+                );
+
+        try {
+
+            Path path = Paths.get(
+                    "storage",
+                    fileEntity.getEncryptedName()
+            );
+
+            Files.deleteIfExists(path);
+
+            fileRepository.delete(fileEntity);
+
+        } catch (Exception e) {
+
+            throw new RuntimeException("Failed to delete file");
+        }
+    }
 }

@@ -70,4 +70,23 @@ public class FileController {
     public ResponseEntity<?> getMyFiles() {
         return ResponseEntity.ok(fileService.getMyFiles());
     }
+
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> deleteFile(
+            @RequestParam("filename") String filename) {
+
+        try {
+
+            fileService.deleteFile(filename);
+
+            return ResponseEntity.ok("File deleted successfully");
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(e.getMessage());
+        }
+    }
 }
