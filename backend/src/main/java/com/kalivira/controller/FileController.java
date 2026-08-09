@@ -10,6 +10,10 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import com.kalivira.dto.FileResponseDTO;
+import com.kalivira.entity.FileEntity;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/files")
 public class FileController {
@@ -60,5 +64,10 @@ public class FileController {
                     .internalServerError()
                     .body("Something went wrong while downloading the file");
         }
+    }
+
+    @GetMapping("/my-files")
+    public ResponseEntity<?> getMyFiles() {
+        return ResponseEntity.ok(fileService.getMyFiles());
     }
 }
