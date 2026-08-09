@@ -9,9 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.kalivira.util.JwtUtil;
-
 import java.util.Optional;
 import java.time.LocalDateTime;
+import java.util.regex.Pattern;
+
+
 @Service
 public class UserServiceImpl implements UserService {
     @Autowired
@@ -23,29 +25,82 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private JwtUtil jwtUtil;
 
-
     @Override
-    public String register(RegisterRequest request){
+    public String register(RegisterRequest request) {
 
-        //checking email exists or not
-        if(userRepository.existsByEmail(request.getEmail())){
+        // Name validation
+        if (request.getName() == null ||
+                request.getName().trim().isEmpty()) {
+            return "Name is required";
+        }
+
+        // Email validation
+        if (request.getEmail() == null ||
+                request.getEmail().trim().isEmpty()) {
+            return "Email is required";
+        }
+
+        String email = request.getEmail().trim();
+
+        String emailRegex =
+                "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+
+        if (!Pattern.matches(emailRegex, email)) {
+            return "Invalid email format";
+        }
+
+        // Checking duplicate email
+        if (userRepository.existsByEmail(email)) {
             return "Email already exists";
         }
 
-        //new user creation
+        // Password validation
+        String password = request.getPassword();
+
+        if (password == null || password.isEmpty()) {
+            return "Password is required";
+        }
+
+        if (password.length() < 8) {
+            return "Password must be at least 8 characters";
+        }
+
+        if (!password.matches(".*[A-Z].*")) {
+            return "Password must contain an uppercase letter";
+        }
+
+        if (!password.matches(".*[a-z].*")) {
+            return "Password must contain a lowercase letter";
+        }
+
+        if (!password.matches(".*[0-9].*")) {
+            return "Password must contain a number";
+        }
+
+        if (!password.matches(".*[^A-Za-z0-9].*")) {
+            return "Password must contain a special character";
+        }
+
+        // Create new user
         UserEntity user = new UserEntity();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        user.setName(request.getName().trim());
+        user.setEmail(email);
+
+        // BCrypt hashing
+        user.setPassword(
+                passwordEncoder.encode(password)
+        );
+
         user.setRole("USER");
         user.setCreatedAt(LocalDateTime.now());
 
-
-        //save to db
+        // Save to DB
         userRepository.save(user);
-        return "User Registered Successfully";
 
+        return "User Registered Successfully";
     }
+
 
     @Override
     public String login(LoginRequest request){

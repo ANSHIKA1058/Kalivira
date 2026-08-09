@@ -12,7 +12,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import com.kalivira.dto.FileResponseDTO;
 import com.kalivira.entity.FileEntity;
-import java.util.List;
+import java.util.List;import com.kalivira.exception.InvalidPasswordException;
+import com.kalivira.exception.FileAccessDeniedException;
+
 
 @RestController
 @RequestMapping("/api/files")
@@ -30,6 +32,8 @@ public class FileController {
     ){
         return fileService.uploadFile(file,password);
     }
+
+
     @GetMapping("/download")
     public ResponseEntity<?> downloadFile(
             @RequestParam("filename") String filename,
@@ -39,7 +43,8 @@ public class FileController {
 
             byte[] data = fileService.downloadFile(filename, password);
 
-            ByteArrayResource resource = new ByteArrayResource(data);
+            ByteArrayResource resource =
+                    new ByteArrayResource(data);
 
             return ResponseEntity.ok()
                     .header(
@@ -52,16 +57,22 @@ public class FileController {
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .body(resource);
 
+        } catch (InvalidPasswordException e) {
+
+            return ResponseEntity
+                    .status(400)
+                    .body("Invalid password");
+
+        } catch (FileAccessDeniedException e) {
+
+            return ResponseEntity
+                    .status(403)
+                    .body("Access denied: You can only access your own files");
+
         } catch (RuntimeException e) {
 
             return ResponseEntity
-                    .badRequest()
-                    .body("Invalid password");
-
-        } catch (Exception e) {
-
-            return ResponseEntity
-                    .internalServerError()
+                    .status(500)
                     .body("Something went wrong while downloading the file");
         }
     }
@@ -80,13 +91,22 @@ public class FileController {
 
             fileService.deleteFile(filename);
 
-            return ResponseEntity.ok("File deleted successfully");
+            return ResponseEntity.ok(
+                    "File deleted successfully"
+            );
+
+        } catch (FileAccessDeniedException e) {
+
+            return ResponseEntity
+                    .status(403)
+                    .body("Access denied: You can only delete your own files");
 
         } catch (RuntimeException e) {
 
             return ResponseEntity
-                    .badRequest()
-                    .body(e.getMessage());
+                    .status(500)
+                    .body("Failed to delete file");
         }
     }
+
 }

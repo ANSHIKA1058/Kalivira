@@ -6,10 +6,10 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import com.kalivira.exception.InvalidPasswordException;
+import javax.crypto.AEADBadTagException;
 
 public class AESUtil {
 
@@ -86,39 +86,50 @@ public class AESUtil {
     }
 
     // Decrypt file data
+
     public static byte[] decrypt(byte[] encryptedData, String password)
             throws Exception {
 
-        ByteBuffer buffer = ByteBuffer.wrap(encryptedData);
+        try {
 
-        // Extract salt
-        byte[] salt = new byte[SALT_LENGTH];
-        buffer.get(salt);
+            ByteBuffer buffer = ByteBuffer.wrap(encryptedData);
 
-        // Extract IV
-        byte[] iv = new byte[IV_LENGTH];
-        buffer.get(iv);
+            // Extract salt
+            byte[] salt = new byte[SALT_LENGTH];
+            buffer.get(salt);
 
-        // Extract encrypted content + authentication tag
-        byte[] cipherText = new byte[buffer.remaining()];
-        buffer.get(cipherText);
+            // Extract IV
+            byte[] iv = new byte[IV_LENGTH];
+            buffer.get(iv);
 
-        // Generate same AES-256 key
-        SecretKey secretKey = generateKey(password, salt);
+            // Extract encrypted content + authentication tag
+            byte[] cipherText = new byte[buffer.remaining()];
+            buffer.get(cipherText);
 
-        // AES-GCM
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            // Generate same AES-256 key
+            SecretKey secretKey = generateKey(password, salt);
 
-        GCMParameterSpec gcmSpec =
-                new GCMParameterSpec(TAG_LENGTH, iv);
+            // AES-GCM
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
 
-        cipher.init(
-                Cipher.DECRYPT_MODE,
-                secretKey,
-                gcmSpec
-        );
+            GCMParameterSpec gcmSpec =
+                    new GCMParameterSpec(TAG_LENGTH, iv);
 
-        //wrong pass fails
-        return cipher.doFinal(cipherText);
+            cipher.init(
+                    Cipher.DECRYPT_MODE,
+                    secretKey,
+                    gcmSpec
+            );
+
+            // Correct password -> decrypted data
+            // Wrong password -> AEADBadTagException
+            return cipher.doFinal(cipherText);
+
+        } catch (AEADBadTagException e) {
+
+            throw new InvalidPasswordException(
+                    "Invalid password"
+            );
+        }
     }
 }

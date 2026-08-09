@@ -11,6 +11,7 @@ import com.kalivira.repository.FileRepository;
 import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.kalivira.exception.InvalidPasswordException;
+import com.kalivira.exception.FileAccessDeniedException;
 import com.kalivira.entity.UserEntity;
 import com.kalivira.repository.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -70,42 +71,56 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public byte[] downloadFile(String filename, String password) {
+
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        // Get logged-in user
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found")
+                );
+
+        // Find file belonging ONLY to logged-in user
+        FileEntity fileEntity = fileRepository
+                .findByEncryptedNameAndUser(filename, user)
+                .orElseThrow(() ->
+                        new FileAccessDeniedException(
+                                "File not found or access denied"
+                        )
+                );
+
         try {
 
-            // Get logged-in user's email from JWT
-            String email = SecurityContextHolder.getContext()
-                    .getAuthentication()
-                    .getName();
-
-            // Find logged-in user
-            UserEntity user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            // Find file ONLY if it belongs to this user
-            FileEntity fileEntity = fileRepository
-                    .findByEncryptedNameAndUser(filename, user)
-                    .orElseThrow(() -> new RuntimeException("File not found or access denied"));
-
-            // Now read the physical encrypted file
-            Path path = Paths.get("storage", fileEntity.getEncryptedName());
-
-            System.out.println("Download Path = " + path.toAbsolutePath());
-
+            // Physical encrypted file path
+            Path path = Paths.get(
+                    "storage",
+                    fileEntity.getEncryptedName()
+            );
+            // Check whether physical file exists
+            if (!Files.exists(path)) {
+                throw new RuntimeException(
+                        "Encrypted file not found in storage"
+                );
+            }
+            // Read encrypted file
             byte[] encryptedBytes = Files.readAllBytes(path);
-
-            System.out.println("Read Encrypted Size = " + encryptedBytes.length);
-
+            System.out.println(
+                    "Read Encrypted Size = " + encryptedBytes.length
+            );
             // Decrypt
             return AESUtil.decrypt(encryptedBytes, password);
-
+        } catch (InvalidPasswordException e) {
+            // Wrong password
+            throw e;
         } catch (Exception e) {
-
-            throw new InvalidPasswordException(
-                    "Invalid password or file access denied"
+            // Any other storage/system error
+            throw new RuntimeException(
+                    "Something went wrong while downloading the file"
             );
         }
     }
-
 
     @Override
     public List<FileResponseDTO> getMyFiles() {
