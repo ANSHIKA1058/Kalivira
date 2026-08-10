@@ -5,5 +5,5 @@ import com.kalivira.dto.RegisterRequest;
 public interface UserService {
     String register(RegisterRequest request);
     String login(LoginRequest request);
-
+    String verifyOtp(String email, String otp);
 }

@@ -12,6 +12,7 @@ import com.kalivira.util.JwtUtil;
 import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.regex.Pattern;
+import com.kalivira.service.EmailService;
 
 
 @Service
@@ -24,6 +25,10 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private EmailService emailService;
+
 
     @Override
     public String register(RegisterRequest request) {
@@ -49,7 +54,7 @@ public class UserServiceImpl implements UserService {
             return "Invalid email format";
         }
 
-        // Checking duplicate email
+        // Duplicate email check
         if (userRepository.existsByEmail(email)) {
             return "Email already exists";
         }
@@ -81,26 +86,38 @@ public class UserServiceImpl implements UserService {
             return "Password must contain a special character";
         }
 
-        // Create new user
+        // Create user
         UserEntity user = new UserEntity();
 
         user.setName(request.getName().trim());
         user.setEmail(email);
 
-        // BCrypt hashing
-        user.setPassword(
-                passwordEncoder.encode(password)
-        );
+        // BCrypt password hashing
+        user.setPassword(passwordEncoder.encode(password));
 
         user.setRole("USER");
         user.setCreatedAt(LocalDateTime.now());
 
-        // Save to DB
+        // Email verification
+        user.setEmailVerified(false);
+
+        // Generate 6-digit OTP
+        String otp = String.valueOf(
+                (int) (Math.random() * 900000) + 100000
+        );
+
+        // OTP expiry = 5 minutes
+        user.setVerificationOtp(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+
+        // Save user
         userRepository.save(user);
 
-        return "User Registered Successfully";
-    }
+        // Send OTP email
+        emailService.sendOtpEmail(email, otp);
 
+        return "User registered successfully. OTP sent to your email.";
+    }
 
     @Override
     public String login(LoginRequest request){
@@ -120,5 +137,53 @@ public class UserServiceImpl implements UserService {
 
         String token = jwtUtil.generateToken(user.getEmail());
         return token;
+    }
+
+
+    @Override
+    public String verifyOtp(String email, String otp) {
+
+        Optional<UserEntity> userOptional =
+                userRepository.findByEmail(email);
+
+        // Email doesn't exist
+        if (userOptional.isEmpty()) {
+            return "Email not found";
+        }
+
+        UserEntity user = userOptional.get();
+
+        // Already verified
+        if (user.isEmailVerified()) {
+            return "Email already verified";
+        }
+
+        // OTP doesn't exist
+        if (user.getVerificationOtp() == null) {
+            return "OTP not found. Please register again.";
+        }
+
+        // OTP expired
+        if (user.getOtpExpiry() == null ||
+                LocalDateTime.now().isAfter(user.getOtpExpiry())) {
+
+            return "OTP expired. Please request a new OTP.";
+        }
+
+        // WRONG OTP
+        if (!user.getVerificationOtp().equals(otp)) {
+            return "Invalid OTP";
+        }
+
+        // Correct OTP
+        user.setEmailVerified(true);
+
+        // OTP ko clear kar do after successful verification
+        user.setVerificationOtp(null);
+        user.setOtpExpiry(null);
+
+        userRepository.save(user);
+
+        return "Email verified successfully";
     }
 }

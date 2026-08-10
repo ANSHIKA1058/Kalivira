@@ -27,4 +27,12 @@ public class UserEntity {
     private String role;
 
     private LocalDateTime createdAt;
+
+    // Email verification
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
+    private String verificationOtp;
+
+    private LocalDateTime otpExpiry;
 }
