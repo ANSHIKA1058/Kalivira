@@ -35,4 +35,8 @@ public class UserEntity {
     private String verificationOtp;
 
     private LocalDateTime otpExpiry;
+
+    private String mfaOtp;
+
+    private LocalDateTime mfaOtpExpiry;
 }

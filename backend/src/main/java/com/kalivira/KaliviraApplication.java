@@ -9,5 +9,4 @@ public class KaliviraApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(KaliviraApplication.class, args);
 	}
-
 }

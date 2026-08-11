@@ -6,4 +6,5 @@ public interface UserService {
     String register(RegisterRequest request);
     String login(LoginRequest request);
     String verifyOtp(String email, String otp);
+    String verifyMfa(String email, String otp);
 }

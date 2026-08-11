@@ -120,23 +120,52 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public String login(LoginRequest request){
+    public String login(LoginRequest request) {
 
-        //Email search
-        Optional<UserEntity> userOptional = userRepository.findByEmail(request.getEmail());
+        // Email search
+        Optional<UserEntity> userOptional =
+                userRepository.findByEmail(request.getEmail());
 
-        if(userOptional.isEmpty()){
+        if (userOptional.isEmpty()) {
             return "Email not found";
         }
+
         UserEntity user = userOptional.get();
 
-        //password verify
-        if(!passwordEncoder.matches(request.getPassword(),user.getPassword())){
+        // Check email verification
+        if (!user.isEmailVerified()) {
+            return "Please verify your email first";
+        }
+
+        // Password verify
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword())) {
+
             return "Invalid Password";
         }
 
-        String token = jwtUtil.generateToken(user.getEmail());
-        return token;
+        // Generate 6-digit MFA OTP
+        String mfaOtp = String.valueOf(
+                (int) (Math.random() * 900000) + 100000
+        );
+
+        // MFA OTP valid for 5 minutes
+        user.setMfaOtp(mfaOtp);
+        user.setMfaOtpExpiry(
+                LocalDateTime.now().plusMinutes(5)
+        );
+
+        // Save MFA OTP
+        userRepository.save(user);
+
+        // Send MFA OTP to email
+        emailService.sendMfaOtpEmail(
+                user.getEmail(),
+                mfaOtp
+        );
+
+        return "Password verified. MFA OTP sent to your email.";
     }
 
 
@@ -185,5 +214,49 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         return "Email verified successfully";
+    }
+
+
+
+    @Override
+    public String verifyMfa(String email, String otp) {
+
+        Optional<UserEntity> userOptional =
+                userRepository.findByEmail(email);
+
+        // Email doesn't exist
+        if (userOptional.isEmpty()) {
+            return "Email not found";
+        }
+
+        UserEntity user = userOptional.get();
+
+        // MFA OTP doesn't exist
+        if (user.getMfaOtp() == null) {
+            return "MFA OTP not found. Please login again.";
+        }
+
+        // MFA OTP expired
+        if (user.getMfaOtpExpiry() == null ||
+                LocalDateTime.now().isAfter(user.getMfaOtpExpiry())) {
+
+            return "MFA OTP expired. Please login again.";
+        }
+
+        // Wrong OTP
+        if (!user.getMfaOtp().equals(otp)) {
+            return "Invalid MFA OTP";
+        }
+
+        // Clear OTP after successful verification
+        user.setMfaOtp(null);
+        user.setMfaOtpExpiry(null);
+
+        userRepository.save(user);
+
+        // Generate JWT only after MFA verification
+        String token = jwtUtil.generateToken(user.getEmail());
+
+        return token;
     }
 }

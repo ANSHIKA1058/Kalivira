@@ -33,4 +33,14 @@ public class AutoController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/verify-mfa")
+    public ResponseEntity<String> verifyMfa(
+            @RequestParam String email,
+            @RequestParam String otp) {
+
+        String response = userService.verifyMfa(email, otp);
+
+        return ResponseEntity.ok(response);
+    }
 }
