@@ -17,6 +17,10 @@ import com.kalivira.repository.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
 import com.kalivira.dto.FileResponseDTO;
+import org.springframework.beans.factory.annotation.Value;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
 public class FileServiceImpl implements FileService {
@@ -26,6 +30,13 @@ public class FileServiceImpl implements FileService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private S3Client s3Client;
+
+    @Value("${aws.s3.bucket-name}")
+    private String bucketName;
+
 
     @Override
     public String uploadFile(MultipartFile file, String password) {
@@ -43,6 +54,17 @@ public class FileServiceImpl implements FileService {
             System.out.println("Upload Path = " + path.toAbsolutePath());
             //save encrypted file
             Files.write(path,encryptedBytes);
+
+//s3 me upload
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(file.getOriginalFilename() + ".enc")
+                    .build();
+
+            s3Client.putObject(
+                    putObjectRequest,
+                    RequestBody.fromBytes(encryptedBytes)
+            );
 
             FileEntity fileEntity=new FileEntity();
             String email = SecurityContextHolder.getContext()
