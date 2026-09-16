@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import com.kalivira.service.S3Service;
 
 @Service
 public class FileServiceImpl implements FileService {
@@ -37,6 +38,9 @@ public class FileServiceImpl implements FileService {
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
 
+
+    @Autowired
+    private S3Service s3Service;
 
     @Override
     public String uploadFile(MultipartFile file, String password) {
@@ -115,19 +119,10 @@ public class FileServiceImpl implements FileService {
 
         try {
 
-            // Physical encrypted file path
-            Path path = Paths.get(
-                    "storage",
+            byte[] encryptedBytes = s3Service.downloadFile(
                     fileEntity.getEncryptedName()
             );
-            // Check whether physical file exists
-            if (!Files.exists(path)) {
-                throw new RuntimeException(
-                        "Encrypted file not found in storage"
-                );
-            }
-            // Read encrypted file
-            byte[] encryptedBytes = Files.readAllBytes(path);
+
             System.out.println(
                     "Read Encrypted Size = " + encryptedBytes.length
             );
@@ -185,12 +180,9 @@ public class FileServiceImpl implements FileService {
 
         try {
 
-            Path path = Paths.get(
-                    "storage",
+            s3Service.deleteFile(
                     fileEntity.getEncryptedName()
             );
-
-            Files.deleteIfExists(path);
 
             fileRepository.delete(fileEntity);
 
