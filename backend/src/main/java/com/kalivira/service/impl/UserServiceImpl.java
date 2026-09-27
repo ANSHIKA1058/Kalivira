@@ -216,8 +216,107 @@ public class UserServiceImpl implements UserService {
         return "Email verified successfully";
     }
 
+    @Override
+    public String resendOtp(String email) {
+
+        Optional<UserEntity> userOptional =
+                userRepository.findByEmail(email);
+
+        if (userOptional.isEmpty()) {
+            return "Email not found";
+        }
+
+        UserEntity user = userOptional.get();
+
+        if (user.isEmailVerified()) {
+            return "Email already verified";
+        }
+
+        // Generate new 6-digit OTP
+        String otp = String.valueOf(
+                (int) (Math.random() * 900000) + 100000
+        );
+
+        // Update OTP and expiry
+        user.setVerificationOtp(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+
+        userRepository.save(user);
+
+        // Send new OTP
+        emailService.sendOtpEmail(email, otp);
+
+        return "New OTP sent to your email";
+    }
 
 
+    @Override
+    public String forgotPassword(String email) {
+
+        Optional<UserEntity> userOptional =
+                userRepository.findByEmail(email);
+
+        if (userOptional.isEmpty()) {
+            return "Email not found";
+        }
+
+        UserEntity user = userOptional.get();
+
+        String otp = String.valueOf(
+                (int) (Math.random() * 900000) + 100000
+        );
+
+        user.setVerificationOtp(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+
+        userRepository.save(user);
+
+        emailService.sendOtpEmail(email, otp);
+
+        return "Password reset OTP sent to your email";
+    }
+
+    @Override
+    public String resetPassword(
+            String email,
+            String otp,
+            String newPassword) {
+
+        Optional<UserEntity> userOptional =
+                userRepository.findByEmail(email);
+
+        if (userOptional.isEmpty()) {
+            return "Email not found";
+        }
+
+        UserEntity user = userOptional.get();
+
+        if (user.getVerificationOtp() == null) {
+            return "OTP not found. Please request a new OTP.";
+        }
+
+        if (user.getOtpExpiry() == null ||
+                LocalDateTime.now().isAfter(user.getOtpExpiry())) {
+            return "OTP expired. Please request a new OTP.";
+        }
+
+        if (!user.getVerificationOtp().equals(otp)) {
+            return "Invalid OTP";
+        }
+
+        if (newPassword == null || newPassword.length() < 8) {
+            return "Password must be at least 8 characters";
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        user.setVerificationOtp(null);
+        user.setOtpExpiry(null);
+
+        userRepository.save(user);
+
+        return "Password reset successfully";
+    }
     @Override
     public String verifyMfa(String email, String otp) {
 

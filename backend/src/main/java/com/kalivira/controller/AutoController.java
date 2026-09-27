@@ -33,6 +33,39 @@ public class AutoController {
 
         return ResponseEntity.ok(response);
     }
+    @PostMapping("/resend-otp")
+    public ResponseEntity<String> resendOtp(
+            @RequestParam String email) {
+
+        String response = userService.resendOtp(email);
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(
+            @RequestParam String email) {
+
+        String response = userService.forgotPassword(email);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(
+            @RequestParam String email,
+            @RequestParam String otp,
+            @RequestParam String newPassword) {
+
+        String response = userService.resetPassword(
+                email,
+                otp,
+                newPassword
+        );
+
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping("/verify-mfa")
     public ResponseEntity<String> verifyMfa(
