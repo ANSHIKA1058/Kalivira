@@ -110,7 +110,7 @@ public class FileServiceImpl implements FileService {
 
         // Find file belonging ONLY to logged-in user
         FileEntity fileEntity = fileRepository
-                .findByEncryptedNameAndUser(filename, user)
+                .findByOriginalNameAndUser(filename, user)
                 .orElseThrow(() ->
                         new FileAccessDeniedException(
                                 "File not found or access denied"

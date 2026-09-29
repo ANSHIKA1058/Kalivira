@@ -13,5 +13,13 @@ public interface FileRepository extends JpaRepository<FileEntity, Long> {
             String encryptedName,
             UserEntity user
     );
+
+
+    Optional<FileEntity> findByOriginalNameAndUser(
+            String originalName,
+            UserEntity user
+    );
+
+
     List<FileEntity> findAllByUser(UserEntity user);
 }
