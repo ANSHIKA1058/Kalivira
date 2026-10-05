@@ -54,22 +54,26 @@ public class FileServiceImpl implements FileService {
 
             System.out.println("Encrypted Size = " + encryptedBytes.length);
             //path of storage folder
-            Path path = Paths.get("storage", file.getOriginalFilename()+".enc");
-            System.out.println("Upload Path = " + path.toAbsolutePath());
-            //save encrypted file
-            Files.write(path,encryptedBytes);
+            String encryptedFileName =
+                    java.util.UUID.randomUUID() + "-" +
+                            file.getOriginalFilename() + ".enc";
 
-//s3 me upload
+// Save encrypted file locally
+            Path path = Paths.get("storage", encryptedFileName);
+
+            System.out.println("Upload Path = " + path.toAbsolutePath());
+
+            Files.write(path, encryptedBytes);
+
+// Upload encrypted file to S3
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
-                    .key(file.getOriginalFilename() + ".enc")
+                    .key(encryptedFileName)
                     .build();
-
             s3Client.putObject(
                     putObjectRequest,
                     RequestBody.fromBytes(encryptedBytes)
             );
-
             FileEntity fileEntity=new FileEntity();
             String email = SecurityContextHolder.getContext()
                     .getAuthentication()
@@ -80,7 +84,7 @@ public class FileServiceImpl implements FileService {
 
             fileEntity.setUser(user);
             fileEntity.setOriginalName(file.getOriginalFilename());
-            fileEntity.setEncryptedName(file.getOriginalFilename()+".enc");
+            fileEntity.setEncryptedName(encryptedFileName);
             fileEntity.setFileSize(file.getSize());
             fileEntity.setUploadTime(LocalDateTime.now());
             fileRepository.save(fileEntity);
@@ -173,7 +177,7 @@ public class FileServiceImpl implements FileService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         FileEntity fileEntity = fileRepository
-                .findByEncryptedNameAndUser(filename, user)
+                .findByOriginalNameAndUser(filename, user)
                 .orElseThrow(() ->
                         new RuntimeException("File not found or access denied")
                 );
