@@ -4,7 +4,7 @@ import java.util.List;
 import com.kalivira.dto.FileResponseDTO;
 public interface FileService {
     String uploadFile(MultipartFile file, String password);
-    byte[] downloadFile(String filename, String password);
+    byte[] downloadFile(Long fileId, String password);
     List<FileResponseDTO> getMyFiles();
     void deleteFile(String filename);
 }

@@ -19,7 +19,9 @@ public interface FileRepository extends JpaRepository<FileEntity, Long> {
             String originalName,
             UserEntity user
     );
-
-
+    Optional<FileEntity> findByIdAndUser(
+            Long id,
+            UserEntity user
+    );
     List<FileEntity> findAllByUser(UserEntity user);
 }

@@ -99,8 +99,9 @@ public class FileServiceImpl implements FileService {
 
     }
 
+
     @Override
-    public byte[] downloadFile(String filename, String password) {
+    public byte[] downloadFile(Long fileId, String password) {
 
         String email = SecurityContextHolder.getContext()
                 .getAuthentication()
@@ -112,9 +113,9 @@ public class FileServiceImpl implements FileService {
                         new RuntimeException("User not found")
                 );
 
-        // Find file belonging ONLY to logged-in user
+        // Find file by ID AND make sure it belongs to logged-in user
         FileEntity fileEntity = fileRepository
-                .findByOriginalNameAndUser(filename, user)
+                .findByIdAndUser(fileId, user)
                 .orElseThrow(() ->
                         new FileAccessDeniedException(
                                 "File not found or access denied"
@@ -130,11 +131,14 @@ public class FileServiceImpl implements FileService {
             System.out.println(
                     "Read Encrypted Size = " + encryptedBytes.length
             );
+
             // Decrypt
             return AESUtil.decrypt(encryptedBytes, password);
+
         } catch (InvalidPasswordException e) {
             // Wrong password
             throw e;
+
         } catch (Exception e) {
             // Any other storage/system error
             throw new RuntimeException(

@@ -36,12 +36,12 @@ public class FileController {
 
     @GetMapping("/download")
     public ResponseEntity<?> downloadFile(
-            @RequestParam("filename") String filename,
+            @RequestParam("fileId") Long fileId,
             @RequestParam("password") String password) {
 
         try {
 
-            byte[] data = fileService.downloadFile(filename, password);
+            byte[] data = fileService.downloadFile(fileId, password);
 
             ByteArrayResource resource =
                     new ByteArrayResource(data);
@@ -49,9 +49,7 @@ public class FileController {
             return ResponseEntity.ok()
                     .header(
                             HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" +
-                                    filename.replace(".enc", "") +
-                                    "\""
+                            "attachment; filename=\"downloaded-file\""
                     )
                     .contentLength(data.length)
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
