@@ -83,11 +83,11 @@ public class FileController {
 
     @DeleteMapping("/delete")
     public ResponseEntity<?> deleteFile(
-            @RequestParam("filename") String filename) {
+            @RequestParam("fileId") Long fileId) {
 
         try {
 
-            fileService.deleteFile(filename);
+            fileService.deleteFile(fileId);
 
             return ResponseEntity.ok(
                     "File deleted successfully"
@@ -106,5 +106,4 @@ public class FileController {
                     .body("Failed to delete file");
         }
     }
-
 }

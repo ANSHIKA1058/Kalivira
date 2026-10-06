@@ -6,5 +6,5 @@ public interface FileService {
     String uploadFile(MultipartFile file, String password);
     byte[] downloadFile(Long fileId, String password);
     List<FileResponseDTO> getMyFiles();
-    void deleteFile(String filename);
+    void deleteFile(Long fileId);
 }

@@ -171,7 +171,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public void deleteFile(String filename) {
+    public void deleteFile(Long fileId) {
 
         String email = SecurityContextHolder.getContext()
                 .getAuthentication()
@@ -180,18 +180,23 @@ public class FileServiceImpl implements FileService {
         UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Find file by ID AND make sure it belongs to logged-in user
         FileEntity fileEntity = fileRepository
-                .findByOriginalNameAndUser(filename, user)
+                .findByIdAndUser(fileId, user)
                 .orElseThrow(() ->
-                        new RuntimeException("File not found or access denied")
+                        new FileAccessDeniedException(
+                                "File not found or access denied"
+                        )
                 );
 
         try {
 
+            // Delete encrypted file from S3
             s3Service.deleteFile(
                     fileEntity.getEncryptedName()
             );
 
+            // Delete file record from database
             fileRepository.delete(fileEntity);
 
         } catch (Exception e) {
