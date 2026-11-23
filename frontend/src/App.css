@@ -862,3 +862,68 @@ button {
   }
 
 }
+
+
+.signup-switch {
+  margin-top: 18px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.text-button {
+  background: none;
+  border: none;
+  color: #655df5;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.text-button:hover {
+  text-decoration: underline;
+}
+/* Delete Modal Password Field */
+
+.delete-password-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.delete-password-wrapper input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 50px 14px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.delete-password-wrapper input:focus {
+  border-color: #625cf5;
+  box-shadow: 0 0 0 3px rgba(98, 92, 245, 0.12);
+}
+
+.delete-password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 19px;
+  padding: 5px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-password-toggle:hover {
+  color: #625cf5;
+}

@@ -39,4 +39,12 @@ public class UserEntity {
     private String mfaOtp;
 
     private LocalDateTime mfaOtpExpiry;
+
+    // Password reset OTP
+    private String passwordResetOtp;
+    private LocalDateTime passwordResetOtpExpiry;
+
+    // File encryption password recovery OTP
+    private String fileRecoveryOtpHash;
+    private LocalDateTime fileRecoveryOtpExpiry;
 }

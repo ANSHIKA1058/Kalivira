@@ -54,7 +54,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
                     System.out.println("JWT Verified : " + email);
                 }
             } catch (Exception e) {
-                System.out.println("Invalid JWT");
+                System.err.println("JWT authentication failed: "
+                        + e.getClass().getSimpleName()
+                        + " - " + e.getMessage());
+                SecurityContextHolder.clearContext();
             }
         }
         filterChain.doFilter(request, response);

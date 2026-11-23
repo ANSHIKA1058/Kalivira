@@ -90,6 +90,12 @@
 			<artifactId>s3</artifactId>
 		</dependency>
 
+		<!-- AWS KMS -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>kms</artifactId>
+		</dependency>
+
 <!--bcrypt deendency-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

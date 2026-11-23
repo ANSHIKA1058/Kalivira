@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
+
+
 function App() {
   const [token, setToken] = useState(
     localStorage.getItem("kalivira_token")
@@ -14,6 +16,23 @@ function App() {
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+
+  const [showSignup, setShowSignup] = useState(false);
+
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+
+  const [signupOtpRequired, setSignupOtpRequired] = useState(false);
+  const [signupOtp, setSignupOtp] = useState("");
+
+  // Forgot Password
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetOtpSent, setResetOtpSent] = useState(false);
+  const [resetOtp, setResetOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
 
   const [otp, setOtp] = useState("");
   const [mfaRequired, setMfaRequired] = useState(false);
@@ -30,6 +49,27 @@ function App() {
 
   const [showUpload, setShowUpload] = useState(false);
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
+
+
+  // Download password modal
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [fileToDownload, setFileToDownload] = useState(null);
+  const [downloadPassword, setDownloadPassword] = useState("");
+  const [showDownloadPassword, setShowDownloadPassword] = useState(false);
+
+  // File encryption password recovery
+  const [showFileRecovery, setShowFileRecovery] = useState(false);
+  const [recoveryOtpSent, setRecoveryOtpSent] = useState(false);
+  const [recoveryOtp, setRecoveryOtp] = useState("");
+  const [newEncryptionPassword, setNewEncryptionPassword] = useState("");
+  const [confirmEncryptionPassword, setConfirmEncryptionPassword] = useState("");
+
+
+
   useEffect(() => {
     if (token) {
       loadFiles();
@@ -41,47 +81,180 @@ function App() {
     setError("");
   }
 
+
+
+function isStrongPassword(password) {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
   // =========================
   // LOGIN
   // =========================
 
-  async function login(e) {
-    e.preventDefault();
 
-    clearMessages();
-    setLoading(true);
+async function login(e) {
+  e.preventDefault();
+  clearMessages();
+  setLoading(true);
 
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword
-        })
-      });
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: loginEmail.trim(),
+        password: loginPassword
+      })
+    });
 
-      const data = await response.text();
+const data = await response.text();
+const result = data.trim();
 
-      if (!response.ok) {
-        throw new Error(data || "Login failed");
-      }
+if (!response.ok) {
+  throw new Error(
+    "Invalid email or password. Please try again."
+  );
+}
 
-      setEmail(loginEmail);
-      setMfaRequired(true);
+// MFA should open ONLY for this exact success response
+if (result !== "Password verified. MFA OTP sent to your email.") {
+  throw new Error(result || "Login failed.");
+}
 
-      setMessage(
-        "Password verified. MFA OTP has been sent to your email."
-      );
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+setEmail(loginEmail.trim());
+setMfaRequired(true);
+setOtp("");
+
+setMessage("MFA OTP sent to your registered email.");
+
+  } catch (err) {
+    setMfaRequired(false);
+    setError(err.message || "Unable to log in. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+}
+
+// =========================
+// SIGN UP
+// =========================
+
+async function signup(e) {
+  e.preventDefault();
+
+  clearMessages();
+
+  if (!signupName.trim()) {
+    setError("Name is required.");
+    return;
   }
 
+  if (!signupEmail.trim()) {
+    setError("Email is required.");
+    return;
+  }
+
+  if (!isStrongPassword(signupPassword)) {
+    setError(
+      "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character."
+    );
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name: signupName,
+        email: signupEmail,
+        password: signupPassword
+      })
+    });
+
+    const data = await response.text();
+
+    if (!response.ok) {
+      throw new Error(data || "Registration failed");
+    }
+
+    setSignupOtpRequired(true);
+
+    setMessage(
+      "Registration successful. OTP has been sent to your email."
+    );
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// =========================
+// SIGNUP OTP
+// =========================
+
+async function verifySignupOtp(e) {
+  e.preventDefault();
+
+  clearMessages();
+
+  if (!signupOtp) {
+    setError("Please enter the OTP.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch(
+      `/api/auth/verify-otp?email=${encodeURIComponent(
+        signupEmail
+      )}&otp=${encodeURIComponent(signupOtp)}`,
+      {
+        method: "POST"
+      }
+    );
+
+    const data = await response.text();
+
+    if (!response.ok) {
+      throw new Error(
+        data || "OTP verification failed"
+      );
+    }
+
+    setMessage(
+      "Email verified successfully. You can now login."
+    );
+
+    setSignupName("");
+    setSignupEmail("");
+    setSignupPassword("");
+    setSignupOtp("");
+    setSignupOtpRequired(false);
+    setShowSignup(false);
+
+    setLoginEmail(signupEmail);
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
  // =========================
  // MFA
  // =========================
@@ -99,16 +272,20 @@ function App() {
          method: "POST"
        }
      );
-
      const data = await response.text();
-
      if (!response.ok) {
        throw new Error(data || "MFA verification failed");
      }
-
      const jwt = data.trim();
+     // A valid JWT must contain three Base64URL sections
+     if (jwt.split(".").length !== 3) {
+       throw new Error(
+         data || "Invalid MFA OTP. Please try again."
+       );
+     }
 
      localStorage.setItem("kalivira_token", jwt);
+
      localStorage.setItem("kalivira_email", loginEmail);
 
      setToken(jwt);
@@ -123,6 +300,112 @@ function App() {
      setLoading(false);
    }
  }
+
+// =========================
+// FORGOT PASSWORD
+// =========================
+
+async function forgotPassword(e) {
+  e.preventDefault();
+  clearMessages();
+
+  if (!loginEmail.trim()) {
+    setError("Please enter your registered email.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch(
+      `/api/auth/forgot-password?email=${encodeURIComponent(loginEmail.trim())}`,
+      {
+        method: "POST"
+      }
+    );
+
+    const data = await response.text();
+
+    if (!response.ok) {
+      throw new Error(data || "Unable to process request.");
+    }
+
+    // The backend intentionally gives a generic response
+    // whether the email exists or not.
+    setResetOtpSent(true);
+    setMessage(data);
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+
+// =========================
+// RESET PASSWORD
+// =========================
+
+async function resetPassword(e) {
+  e.preventDefault();
+  clearMessages();
+
+  if (!resetOtp.trim()) {
+    setError("Please enter the OTP.");
+    return;
+  }
+
+  if (!isStrongPassword(newPassword)) {
+    setError(
+      "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character."
+    );
+    return;
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    setError("Passwords do not match.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch(
+      `/api/auth/reset-password?email=${encodeURIComponent(loginEmail.trim())}&otp=${encodeURIComponent(resetOtp.trim())}&newPassword=${encodeURIComponent(newPassword)}`,
+      {
+        method: "POST"
+      }
+    );
+
+    const data = await response.text();
+
+    if (!response.ok) {
+      throw new Error(data || "Password reset failed.");
+    }
+
+    if (data.trim() !== "Password reset successfully.") {
+      throw new Error(data || "Password reset failed.");
+    }
+
+    setMessage("Password reset successfully. Please login with your new password.");
+
+    setLoginPassword("");
+    setResetOtp("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+
+    setResetOtpSent(false);
+    setShowForgotPassword(false);
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+
 
   // =========================
   // LOGOUT
@@ -144,32 +427,37 @@ function App() {
   // =========================
   // LOAD FILES
   // =========================
-
-  async function loadFiles() {
-    try {
-      const response = await fetch("/api/files/my-files", {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (response.status === 401) {
-        logout();
-        return;
+async function loadFiles() {
+  try {
+    const response = await fetch("/api/files/my-files", {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
+    });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error("Failed to load files");
-      }
-
-      setFiles(data);
-    } catch (err) {
-      setError(err.message);
+    if (response.status === 401) {
+      logout();
+      return;
     }
-  }
 
+    const responseText = await response.text();
+    console.log("Files API status:", response.status);
+    console.log("Files API response:", responseText);
+
+    if (!response.ok) {
+      throw new Error(
+        responseText || `Failed to load files (${response.status})`
+      );
+    }
+
+    const data = responseText ? JSON.parse(responseText) : [];
+    setFiles(data);
+
+  } catch (err) {
+    console.error("Load files error:", err);
+    setError(err.message);
+  }
+}
   // =========================
   // UPLOAD
   // =========================
@@ -184,10 +472,26 @@ function App() {
       return;
     }
 
-    if (!filePassword) {
-      setError("Please enter a file password.");
+   if (!filePassword) {
+     setError("Please enter a file password.");
+     return;
+   }
+
+   if (!isStrongPassword(filePassword)) {
+     setError(
+       "File password must be at least 8 characters and contain uppercase, lowercase, number, and special character."
+     );
+     return;
+   }
+
+    if (!isStrongPassword(filePassword)) {
+      setError(
+        "File password must be at least 8 characters and contain uppercase, lowercase, number, and special character."
+      );
       return;
     }
+
+
 
     setLoading(true);
 
@@ -231,115 +535,256 @@ function App() {
     }
   }
 
-  // =========================
-  // DOWNLOAD BY FILE ID
-  // =========================
+// =========================
+// DOWNLOAD MODAL
+// =========================
 
-  async function downloadFile(file) {
-    clearMessages();
+function downloadFile(file) {
+  clearMessages();
+  setFileToDownload(file);
+  setDownloadPassword("");
+  setShowDownloadPassword(false);
+  setShowDownloadModal(true);
+}
 
-    const password = window.prompt(
-      `Enter password for ${file.originalName}`
-    );
+// =========================
+// CONFIRM DOWNLOAD
+// =========================
 
-    if (password === null) {
-      return;
-    }
+async function confirmDownloadFile(e) {
+  e.preventDefault();
+  clearMessages();
 
-    if (!password) {
-      setError("Password is required.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const url =
-        `/api/files/download?fileId=${file.id}` +
-        `&password=${encodeURIComponent(password)}`;
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        const data = await response.text();
-        throw new Error(data || "Download failed");
-      }
-
-      const blob = await response.blob();
-
-      const downloadUrl = window.URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-
-      a.href = downloadUrl;
-      a.download = file.originalName;
-
-      document.body.appendChild(a);
-
-      a.click();
-
-      a.remove();
-
-      window.URL.revokeObjectURL(downloadUrl);
-
-      setMessage(
-        `${file.originalName} downloaded successfully.`
-      );
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  if (!downloadPassword) {
+    setError("Please enter your file encryption password.");
+    return;
   }
+
+  setLoading(true);
+
+  try {
+    const url =
+      `/api/files/download?fileId=${fileToDownload.id}` +
+      `&password=${encodeURIComponent(downloadPassword)}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const data = await response.text();
+      throw new Error(data || "Download failed.");
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = fileToDownload.originalName;
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(downloadUrl);
+
+    setMessage(`${fileToDownload.originalName} downloaded successfully.`);
+
+    setShowDownloadModal(false);
+    setFileToDownload(null);
+    setDownloadPassword("");
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
 
   // =========================
   // DELETE BY FILE ID
   // =========================
+function deleteFile(file) {
+  clearMessages();
 
-  async function deleteFile(file) {
-    clearMessages();
+  setFileToDelete(file);
+  setDeletePassword("");
+  setShowDeletePassword(false);
+  setShowDeleteModal(true);
+}
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${file.originalName}"?`
-    );
+async function confirmDeleteFile(e) {
+  e.preventDefault();
+  clearMessages();
 
-    if (!confirmed) {
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch(
-        `/api/files/delete?fileId=${file.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      const data = await response.text();
-
-      if (!response.ok) {
-        throw new Error(data || "Delete failed");
-      }
-
-      setMessage(data);
-
-      await loadFiles();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  if (!deletePassword) {
+    setError("Please enter your file encryption password.");
+    return;
   }
 
+  setLoading(true);
+
+  try {
+    const response = await fetch(
+      `/api/files/delete?fileId=${fileToDelete.id}&password=${encodeURIComponent(deletePassword)}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.text();
+
+    if (!response.ok) {
+      throw new Error(data || "Delete failed.");
+    }
+
+    setMessage(data);
+
+    setShowDeleteModal(false);
+    setFileToDelete(null);
+    setDeletePassword("");
+
+    await loadFiles();
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+// =========================
+// OPEN FILE PASSWORD RECOVERY
+// =========================
+
+function openFileRecovery() {
+  clearMessages();
+
+  setShowDownloadModal(false);
+  setShowDeleteModal(false);
+
+  setRecoveryOtpSent(false);
+  setRecoveryOtp("");
+  setNewEncryptionPassword("");
+  setConfirmEncryptionPassword("");
+
+  setShowFileRecovery(true);
+}
+
+// =========================
+// REQUEST FILE RECOVERY OTP
+// =========================
+
+async function requestFileRecoveryOtp(e) {
+  e.preventDefault();
+  clearMessages();
+
+  setLoading(true);
+
+  try {
+    const response = await fetch(
+      "/api/files/recovery/request-otp",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.text();
+
+    if (!response.ok) {
+      throw new Error(data || "Unable to send recovery OTP.");
+    }
+
+    setRecoveryOtpSent(true);
+    setMessage(data || "Recovery OTP sent to your registered email.");
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// =========================
+// RESET FILE ENCRYPTION PASSWORD
+// =========================
+
+async function resetFileEncryptionPassword(e) {
+  e.preventDefault();
+  clearMessages();
+
+  if (!/^[0-9]{6}$/.test(recoveryOtp.trim())) {
+    setError("Please enter a valid 6-digit OTP.");
+    return;
+  }
+
+  if (!isStrongPassword(newEncryptionPassword)) {
+    setError(
+      "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character."
+    );
+    return;
+  }
+
+  if (newEncryptionPassword !== confirmEncryptionPassword) {
+    setError("Passwords do not match.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch(
+      "/api/files/recovery/reset-encryption-password",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          otp: recoveryOtp.trim(),
+          newPassword: newEncryptionPassword
+        })
+      }
+    );
+
+    const data = await response.text();
+
+    if (!response.ok) {
+      throw new Error(data || "Encryption password recovery failed.");
+    }
+
+    setShowFileRecovery(false);
+    setRecoveryOtpSent(false);
+    setRecoveryOtp("");
+    setNewEncryptionPassword("");
+    setConfirmEncryptionPassword("");
+
+    setShowDownloadModal(false);
+    setShowDeleteModal(false);
+    setFileToDownload(null);
+    setFileToDelete(null);
+    setDownloadPassword("");
+    setDeletePassword("");
+
+    setMessage(
+      "File encryption password updated successfully. Use your new password to access your recoverable files."
+    );
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
   // =========================
   // LOGIN SCREEN
   // =========================
@@ -356,9 +801,43 @@ function App() {
         otp={otp}
         setOtp={setOtp}
         verifyMfa={verifyMfa}
+        showForgotPassword={showForgotPassword}
+        setShowForgotPassword={setShowForgotPassword}
+
+        resetOtpSent={resetOtpSent}
+        setResetOtpSent={setResetOtpSent}
+
+        resetOtp={resetOtp}
+        setResetOtp={setResetOtp}
+
+        newPassword={newPassword}
+        setNewPassword={setNewPassword}
+
+        confirmNewPassword={confirmNewPassword}
+        setConfirmNewPassword={setConfirmNewPassword}
+
+        forgotPassword={forgotPassword}
+        resetPassword={resetPassword}
         loading={loading}
         message={message}
         error={error}
+
+        showSignup={showSignup}
+        setShowSignup={setShowSignup}
+
+        signupName={signupName}
+        setSignupName={setSignupName}
+        signupEmail={signupEmail}
+        setSignupEmail={setSignupEmail}
+        signupPassword={signupPassword}
+        setSignupPassword={setSignupPassword}
+
+        signup={signup}
+        signupOtpRequired={signupOtpRequired}
+        signupOtp={signupOtp}
+        setSignupOtp={setSignupOtp}
+        verifySignupOtp={verifySignupOtp}
+        setSignupOtpRequired={setSignupOtpRequired}
       />
     );
   }
@@ -454,6 +933,9 @@ function App() {
               <span>Authenticated user</span>
             </div>
 
+
+
+
           </div>
 
         </header>
@@ -504,12 +986,258 @@ function App() {
 
       </main>
 
+
+      {/* DOWNLOAD PASSWORD MODAL */}
+      {showDownloadModal && fileToDownload && (
+        <div className="modal-overlay">
+          <div className="modal">
+
+            <div className="modal-header">
+              <div>
+                <p className="small-label">SECURE DOWNLOAD</p>
+                <h2>Download File</h2>
+              </div>
+
+              <button
+                type="button"
+                className="close-button"
+                onClick={() => {
+                  setShowDownloadModal(false);
+                  setFileToDownload(null);
+                  setDownloadPassword("");
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <p>
+              Enter the encryption password for:
+              <strong> {fileToDownload.originalName}</strong>
+            </p>
+
+            <form onSubmit={confirmDownloadFile}>
+              <label>Encryption Password</label>
+
+              <div className="delete-password-wrapper">
+                <input
+                  type={showDownloadPassword ? "text" : "password"}
+                  placeholder="Enter file encryption password"
+                  value={downloadPassword}
+                  onChange={(e) => setDownloadPassword(e.target.value)}
+                  required
+                />
+
+                <button
+                  type="button"
+                  className="delete-password-toggle"
+                  onClick={() => setShowDownloadPassword(!showDownloadPassword)}
+                  aria-label={showDownloadPassword ? "Hide password" : "Show password"}
+                >
+                  {showDownloadPassword ? "🙈" : "👁"}
+                </button>
+              </div>
+
+              <div style={{ textAlign: "right", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={openFileRecovery}
+                >
+                  Forgot Encryption Password?
+                </button>
+              </div>
+
+
+
+              <div className="header-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    setShowDownloadModal(false);
+                    setFileToDownload(null);
+                    setDownloadPassword("");
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={loading}
+                >
+                  {loading ? "Downloading..." : "Download"}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+
+        {/* DELETE MODAL */}
+        {showDeleteModal && fileToDelete && (
+          <div className="modal-overlay">
+            <div className="modal">
+
+              <div className="modal-header">
+                <div>
+                  <p className="small-label">SECURE DELETE</p>
+                  <h2>Delete File</h2>
+                </div>
+
+                <button
+                  type="button"
+                  className="close-button"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setFileToDelete(null);
+                    setDeletePassword("");
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <p>
+                Are you sure you want to delete:
+                <strong> {fileToDelete.originalName}</strong>
+              </p>
+
+              <form onSubmit={confirmDeleteFile}>
+
+                <label>Encryption Password</label>
+
+               <div className="delete-password-wrapper">
+                 <input
+                   type={showDeletePassword ? "text" : "password"}
+                   placeholder="Enter file encryption password"
+                   value={deletePassword}
+                   onChange={(e) => setDeletePassword(e.target.value)}
+                   required
+                 />
+
+                 <button
+                   type="button"
+                   className="delete-password-toggle"
+                   onClick={() => setShowDeletePassword(!showDeletePassword)}
+                   aria-label={showDeletePassword ? "Hide password" : "Show password"}
+                   title={showDeletePassword ? "Hide password" : "Show password"}
+                 >
+                   {showDeletePassword ? "🙈" : "👁"}
+                 </button>
+               </div>
+<div style={{ textAlign: "right", marginTop: "10px" }}>
+  <button
+    type="button"
+    className="text-button"
+    onClick={openFileRecovery}
+  >
+    Forgot Encryption Password?
+  </button>
+</div>
+                <div className="header-actions">
+
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setFileToDelete(null);
+                      setDeletePassword("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="primary-button"
+                    disabled={loading}
+                  >
+                    {loading ? "Deleting..." : "Confirm Delete"}
+                  </button>
+
+                </div>
+
+              </form>
+            </div>
+          </div>
+        )}
+
+
+{/* FILE ENCRYPTION PASSWORD RECOVERY MODAL */}
+{showFileRecovery && (
+  <div className="modal-overlay">
+    <div className="modal">
+      <h2>Recover Encryption Password</h2>
+
+      <p>
+        Verify your email using an OTP to reset your file
+        encryption password.
+      </p>
+
+      {!recoveryOtpSent ? (
+        <form onSubmit={requestFileRecoveryOtp}>
+          <button type="submit" className="primary-btn">
+            Send Recovery OTP
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={resetFileEncryptionPassword}>
+          <input
+            type="text"
+            placeholder="Enter 6-digit OTP"
+            value={recoveryOtp}
+            onChange={(e) => setRecoveryOtp(e.target.value)}
+            maxLength={6}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="New Encryption Password"
+            value={newEncryptionPassword}
+            onChange={(e) => setNewEncryptionPassword(e.target.value)}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Confirm New Encryption Password"
+            value={confirmEncryptionPassword}
+            onChange={(e) =>
+              setConfirmEncryptionPassword(e.target.value)
+            }
+            required
+          />
+
+          <button type="submit" className="primary-btn">
+            Reset Encryption Password
+          </button>
+        </form>
+      )}
+
+      <button
+        type="button"
+        className="text-button"
+        onClick={() => setShowFileRecovery(false)}
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 }
 
 
-// ======================================================
+
+//=========================================================
 // LOGIN SCREEN COMPONENT
 // ======================================================
 
@@ -525,20 +1253,47 @@ function LoginScreen({
   verifyMfa,
   loading,
   message,
-  error
-}) {
+  error,
 
+  showSignup,
+  setShowSignup,
+
+  signupName,
+  setSignupName,
+  signupEmail,
+  setSignupEmail,
+  signupPassword,
+  setSignupPassword,
+
+  signup,
+  signupOtpRequired,
+  signupOtp,
+  setSignupOtp,
+  verifySignupOtp,
+  setSignupOtpRequired,
+
+
+  showForgotPassword,
+  setShowForgotPassword,
+  resetOtpSent,
+  setResetOtpSent,
+  resetOtp,
+  setResetOtp,
+  newPassword,
+  setNewPassword,
+  confirmNewPassword,
+  setConfirmNewPassword,
+  forgotPassword,
+  resetPassword
+}) {
   return (
     <div className="login-page">
-
       <div className="login-card">
 
         <div className="login-logo">
-
           <div className="logo-icon large">
             K
           </div>
-
         </div>
 
         <h1>KALIVIRA</h1>
@@ -547,91 +1302,324 @@ function LoginScreen({
           Secure File Storage System
         </p>
 
-        {!mfaRequired ? (
 
-          <form onSubmit={login}>
+        {/* LOGIN FORM */}
+        {!showSignup && !showForgotPassword && !mfaRequired && (
+          <>
+            <form onSubmit={login}>
+              <label>Email</label>
 
-            <label>
-              Email
-            </label>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                required
+              />
 
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={loginEmail}
-              onChange={(e) =>
-                setLoginEmail(e.target.value)
-              }
-              required
-            />
+              <label>Password</label>
 
-            <label>
-              Password
-            </label>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                required
+              />
 
-            <input
-              type="password"
-              placeholder="Enter your password"
-              value={loginPassword}
-              onChange={(e) =>
-                setLoginPassword(e.target.value)
-              }
-              required
-            />
+              <div style={{ textAlign: "right", marginBottom: "15px" }}>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => {
+                    setShowForgotPassword(true);
+                    setResetOtpSent(false);
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
 
-            <button
-              className="primary-button"
-              disabled={loading}
-            >
-              {loading
-                ? "Signing in..."
-                : "Sign In"}
-            </button>
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={loading}
+              >
+                {loading ? "Signing in..." : "Sign In"}
+              </button>
+            </form>
 
-          </form>
+            <p className="signup-switch">
+              New to Kalivira?{" "}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setShowSignup(true);
+                  setSignupOtpRequired(false);
+                }}
+              >
+                Create Account
+              </button>
+            </p>
+          </>
+        )}
 
-        ) : (
-
+        {/* MFA FORM */}
+        {!showSignup && !showForgotPassword && mfaRequired && (
           <form onSubmit={verifyMfa}>
-
             <div className="otp-info">
-
               MFA OTP sent to
-
-              <strong>
-                {loginEmail}
-              </strong>
-
+              <strong>{loginEmail}</strong>
             </div>
 
-            <label>
-              MFA OTP
-            </label>
+            <label>MFA OTP</label>
 
             <input
               type="text"
               placeholder="Enter 6-digit OTP"
               value={otp}
-              onChange={(e) =>
-                setOtp(e.target.value)
-              }
-              maxLength="6"
+              onChange={(e) => setOtp(e.target.value)}
+              maxLength={6}
+              pattern="[0-9]{6}"
               required
             />
 
             <button
+              type="submit"
+              className="primary-button"
+              disabled={loading}
+            >
+              {loading ? "Verifying..." : "Verify & Continue"}
+            </button>
+          </form>
+        )}
+
+        {/* FORGOT PASSWORD - REQUEST OTP */}
+        {!showSignup && showForgotPassword && !resetOtpSent && (
+          <form onSubmit={forgotPassword}>
+            <h2>Forgot Password?</h2>
+
+            <p className="otp-info">
+              Enter your registered email address to request a password reset OTP.
+            </p>
+
+            <label>Email</label>
+
+            <input
+              type="email"
+              placeholder="Enter your registered email"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              required
+            />
+
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={loading}
+            >
+              {loading ? "Sending..." : "Send Reset OTP"}
+            </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setShowForgotPassword(false);
+                setResetOtpSent(false);
+              }}
+            >
+              Back to Login
+            </button>
+          </form>
+        )}
+
+
+
+        {/* FORGOT PASSWORD - RESET FORM */}
+        {!showSignup && showForgotPassword && resetOtpSent && (
+          <form onSubmit={resetPassword}>
+            <h2>Reset Password</h2>
+
+            <p className="otp-info">
+              If an account exists, a password reset OTP has been sent to your email.
+            </p>
+
+            <label>Reset OTP</label>
+
+            <input
+              type="text"
+              placeholder="Enter 6-digit OTP"
+              value={resetOtp}
+              onChange={(e) => setResetOtp(e.target.value)}
+              maxLength={6}
+              pattern="[0-9]{6}"
+              required
+            />
+
+            <label>New Password</label>
+
+            <input
+              type="password"
+              placeholder="Enter new password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
+
+            <label>Confirm New Password</label>
+
+            <input
+              type="password"
+              placeholder="Confirm new password"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              required
+            />
+
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={loading}
+            >
+              {loading ? "Resetting..." : "Reset Password"}
+            </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setResetOtpSent(false);
+                setResetOtp("");
+                setNewPassword("");
+                setConfirmNewPassword("");
+              }}
+            >
+              Back
+            </button>
+          </form>
+        )}
+
+
+      {/* SIGNUP FORM */}
+        {showSignup && !signupOtpRequired && (
+          <form onSubmit={signup}>
+
+            <label>Name</label>
+
+            <input
+              type="text"
+              placeholder="Enter your name"
+              value={signupName}
+              onChange={(e) =>
+                setSignupName(e.target.value)
+              }
+              required
+            />
+
+            <label>Email</label>
+
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={signupEmail}
+              onChange={(e) =>
+                setSignupEmail(e.target.value)
+              }
+              required
+            />
+
+            <label>Password</label>
+
+            <input
+              type="password"
+              placeholder="Create a strong password"
+              value={signupPassword}
+              onChange={(e) =>
+                setSignupPassword(e.target.value)
+              }
+              required
+            />
+
+            <p className="input-help">
+              Password must be at least 8 characters
+              and include uppercase, lowercase, a number,
+              and a special character. This password
+              encrypts your file. Remember it carefully;
+              you will need the same password to decrypt
+              and download it.
+            </p>
+
+            <button
+              type="submit"
               className="primary-button"
               disabled={loading}
             >
               {loading
-                ? "Verifying..."
-                : "Verify & Continue"}
+                ? "Creating Account..."
+                : "Create Account"}
+            </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setShowSignup(false);
+                setSignupOtpRequired(false);
+              }}
+            >
+              Back to Login
             </button>
 
           </form>
-
         )}
 
+        {/* SIGNUP EMAIL OTP FORM */}
+        {showSignup && signupOtpRequired && (
+          <form onSubmit={verifySignupOtp}>
+
+            <div className="otp-info">
+              Registration OTP sent to
+              <strong>{signupEmail}</strong>
+            </div>
+
+            <label>Email Verification OTP</label>
+
+            <input
+              type="text"
+              placeholder="Enter 6-digit OTP"
+              value={signupOtp}
+              onChange={(e) =>
+                setSignupOtp(e.target.value)
+              }
+              maxLength={6}
+              required
+            />
+
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={loading}
+            >
+              {loading ? "Verifying..." : "Verify Email"}
+            </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setSignupOtpRequired(false);
+                setSignupOtp("");
+              }}
+            >
+              Back
+            </button>
+
+          </form>
+        )}
+
+        {/* SUCCESS AND ERROR MESSAGES */}
         {message && (
           <div className="success-message">
             ✓ {message}
@@ -645,16 +1633,12 @@ function LoginScreen({
         )}
 
         <div className="security-note">
-
           🔐 AES encrypted storage
           <br />
-
           🛡 JWT + MFA protected
-
         </div>
 
       </div>
-
     </div>
   );
 }

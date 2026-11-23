@@ -17,6 +17,16 @@ public class FileEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
+
+    // Encryption metadata for secure password recovery
+
+    private Integer encryptionVersion;
+    private String passwordKeySalt;
+    private String passwordKeyIv;
+    private String passwordWrappedDek;
+    private String recoveryKeyIv;
+    private String recoveryWrappedDek;
+
     public FileEntity() {
     }
     public Long getId() {

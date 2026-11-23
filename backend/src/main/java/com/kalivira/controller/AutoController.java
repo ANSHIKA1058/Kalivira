@@ -6,6 +6,7 @@ import com.kalivira.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -20,9 +21,21 @@ public class AutoController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest request) {
-        return userService.login(request);
+    public ResponseEntity<String> login(@RequestBody LoginRequest request) {
+
+        String response = userService.login(request);
+
+        if (response.equals(
+                "Invalid email or password. Please try again.")) {
+
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(response);
+        }
+
+        return ResponseEntity.ok(response);
     }
+
 
     @PostMapping("/verify-otp")
     public ResponseEntity<String> verifyOtp(
@@ -64,7 +77,13 @@ public class AutoController {
                 newPassword
         );
 
-        return ResponseEntity.ok(response);
+        if ("Password reset successfully.".equals(response)) {
+            return ResponseEntity.ok(response);
+        }
+
+        return ResponseEntity
+                .badRequest()
+                .body(response);
     }
 
     @PostMapping("/verify-mfa")
@@ -73,6 +92,16 @@ public class AutoController {
             @RequestParam String otp) {
 
         String response = userService.verifyMfa(email, otp);
+
+        if (response.equals("Email not found") ||
+                response.equals("MFA OTP not found. Please login again.") ||
+                response.equals("MFA OTP expired. Please login again.") ||
+                response.equals("Invalid MFA OTP")) {
+
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(response);
+        }
 
         return ResponseEntity.ok(response);
     }

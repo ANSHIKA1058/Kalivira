@@ -44,6 +44,10 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public String uploadFile(MultipartFile file, String password) {
+
+        if (!isStrongPassword(password)) {
+            return "Weak password. Password must be at least 8 characters and contain uppercase, lowercase, number, and special character.";
+        }
         try{
             //converting file into bytes
             byte[] fileBytes = file.getBytes();
@@ -147,6 +151,16 @@ public class FileServiceImpl implements FileService {
         }
     }
 
+    private boolean isStrongPassword(String password) {
+
+        return password != null
+                && password.length() >= 8
+                && password.matches(".*[A-Z].*")
+                && password.matches(".*[a-z].*")
+                && password.matches(".*[0-9].*")
+                && password.matches(".*[^A-Za-z0-9].*");
+    }
+
     @Override
     public List<FileResponseDTO> getMyFiles() {
 
@@ -170,8 +184,10 @@ public class FileServiceImpl implements FileService {
                 .toList();
     }
 
+
+
     @Override
-    public void deleteFile(Long fileId) {
+    public void deleteFile(Long fileId, String password) {
 
         String email = SecurityContextHolder.getContext()
                 .getAuthentication()
@@ -180,7 +196,6 @@ public class FileServiceImpl implements FileService {
         UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Find file by ID AND make sure it belongs to logged-in user
         FileEntity fileEntity = fileRepository
                 .findByIdAndUser(fileId, user)
                 .orElseThrow(() ->
@@ -191,17 +206,30 @@ public class FileServiceImpl implements FileService {
 
         try {
 
-            // Delete encrypted file from S3
-            s3Service.deleteFile(
+            // Download encrypted file from S3
+            byte[] encryptedBytes = s3Service.downloadFile(
                     fileEntity.getEncryptedName()
             );
 
-            // Delete file record from database
+            // Verify encryption password before deletion
+            AESUtil.decrypt(encryptedBytes, password);
+
+            // Delete from S3 only after successful verification
+            s3Service.deleteFile(fileEntity.getEncryptedName());
+
+            // Delete database record
             fileRepository.delete(fileEntity);
+
+        } catch (InvalidPasswordException e) {
+
+            throw e;
 
         } catch (Exception e) {
 
-            throw new RuntimeException("Failed to delete file");
+            throw new RuntimeException("Failed to delete file", e);
         }
     }
+
+
+
 }

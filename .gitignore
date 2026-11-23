@@ -1,1 +1,12 @@
 backend/src/main/resources/application.properties
+
+# Local secrets
+/backend/src/main/resources/application.properties
+.env
+.env.*
+*.pem
+*.key
+
+# Generated files and local storage
+/frontend/node_modules/
+/storage/*

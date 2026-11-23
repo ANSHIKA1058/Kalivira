@@ -13,10 +13,18 @@ import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.regex.Pattern;
 import com.kalivira.service.EmailService;
+import java.security.SecureRandom;
 
 
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final SecureRandom secureRandom = new SecureRandom();
+
+    private String generateOtp() {
+        return String.valueOf(100000 + secureRandom.nextInt(900000));
+    }
+
     @Autowired
     private UserRepository userRepository;
 
@@ -59,33 +67,13 @@ public class UserServiceImpl implements UserService {
             return "Email already exists";
         }
 
-        // Password validation
         String password = request.getPassword();
 
-        if (password == null || password.isEmpty()) {
-            return "Password is required";
-        }
+        String passwordError = validatePassword(password);
 
-        if (password.length() < 8) {
-            return "Password must be at least 8 characters";
+        if (passwordError != null) {
+            return passwordError;
         }
-
-        if (!password.matches(".*[A-Z].*")) {
-            return "Password must contain an uppercase letter";
-        }
-
-        if (!password.matches(".*[a-z].*")) {
-            return "Password must contain a lowercase letter";
-        }
-
-        if (!password.matches(".*[0-9].*")) {
-            return "Password must contain a number";
-        }
-
-        if (!password.matches(".*[^A-Za-z0-9].*")) {
-            return "Password must contain a special character";
-        }
-
         // Create user
         UserEntity user = new UserEntity();
 
@@ -119,55 +107,51 @@ public class UserServiceImpl implements UserService {
         return "User registered successfully. OTP sent to your email.";
     }
 
+
     @Override
     public String login(LoginRequest request) {
 
-        // Email search
+        String genericError = "Invalid email or password. Please try again.";
+
+        if (request.getEmail() == null || request.getPassword() == null) {
+            return genericError;
+        }
+
         Optional<UserEntity> userOptional =
-                userRepository.findByEmail(request.getEmail());
+                userRepository.findByEmail(request.getEmail().trim());
 
         if (userOptional.isEmpty()) {
-            return "Email not found";
+            return genericError;
         }
 
         UserEntity user = userOptional.get();
 
-        // Check email verification
+        // Use the same error for an unverified account
         if (!user.isEmailVerified()) {
-            return "Please verify your email first";
+            return genericError;
         }
 
-        // Password verify
+        // Check password
         if (!passwordEncoder.matches(
                 request.getPassword(),
                 user.getPassword())) {
 
-            return "Invalid Password";
+            return genericError;
         }
 
-        // Generate 6-digit MFA OTP
-        String mfaOtp = String.valueOf(
-                (int) (Math.random() * 900000) + 100000
-        );
+        // Generate MFA OTP
+        String mfaOtp = generateOtp();
 
-        // MFA OTP valid for 5 minutes
         user.setMfaOtp(mfaOtp);
-        user.setMfaOtpExpiry(
-                LocalDateTime.now().plusMinutes(5)
-        );
+        user.setMfaOtpExpiry(LocalDateTime.now().plusMinutes(5));
 
-        // Save MFA OTP
         userRepository.save(user);
 
-        // Send MFA OTP to email
-        emailService.sendMfaOtpEmail(
-                user.getEmail(),
-                mfaOtp
-        );
+        // Send MFA OTP
+        emailService.sendMfaOtpEmail(user.getEmail(), mfaOtp);
 
         return "Password verified. MFA OTP sent to your email.";
     }
-
 
     @Override
     public String verifyOtp(String email, String otp) {
@@ -253,28 +237,44 @@ public class UserServiceImpl implements UserService {
     @Override
     public String forgotPassword(String email) {
 
-        Optional<UserEntity> userOptional =
-                userRepository.findByEmail(email);
+        String genericMessage =
+                "If an account exists for that email, a password reset OTP has been sent.";
 
+        if (email == null || email.trim().isEmpty()) {
+            return genericMessage;
+        }
+
+        Optional<UserEntity> userOptional =
+                userRepository.findByEmail(email.trim());
+
+        // Do not reveal whether the email exists
         if (userOptional.isEmpty()) {
-            return "Email not found";
+            return genericMessage;
         }
 
         UserEntity user = userOptional.get();
 
-        String otp = String.valueOf(
-                (int) (Math.random() * 900000) + 100000
-        );
+        // Do not send reset OTP to an unverified account
+        if (!user.isEmailVerified()) {
+            return genericMessage;
+        }
 
-        user.setVerificationOtp(otp);
-        user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        // Generate a separate password-reset OTP
+        String otp = generateOtp();
+
+        user.setPasswordResetOtp(otp);
+        user.setPasswordResetOtpExpiry(
+                LocalDateTime.now().plusMinutes(5)
+        );
 
         userRepository.save(user);
 
-        emailService.sendOtpEmail(email, otp);
+        // Send password-reset email
+        emailService.sendPasswordResetOtpEmail(user.getEmail(), otp);
 
-        return "Password reset OTP sent to your email";
+        return genericMessage;
     }
+
 
     @Override
     public String resetPassword(
@@ -286,37 +286,53 @@ public class UserServiceImpl implements UserService {
                 userRepository.findByEmail(email);
 
         if (userOptional.isEmpty()) {
-            return "Email not found";
+            return "Invalid or expired password reset OTP.";
         }
 
         UserEntity user = userOptional.get();
 
-        if (user.getVerificationOtp() == null) {
-            return "OTP not found. Please request a new OTP.";
+        // Check whether reset OTP exists
+        if (user.getPasswordResetOtp() == null) {
+            return "Invalid or expired password reset OTP.";
         }
 
-        if (user.getOtpExpiry() == null ||
-                LocalDateTime.now().isAfter(user.getOtpExpiry())) {
-            return "OTP expired. Please request a new OTP.";
+        // Check OTP expiry
+        if (user.getPasswordResetOtpExpiry() == null ||
+                LocalDateTime.now().isAfter(user.getPasswordResetOtpExpiry())) {
+
+            user.setPasswordResetOtp(null);
+            user.setPasswordResetOtpExpiry(null);
+            userRepository.save(user);
+
+            return "Invalid or expired password reset OTP.";
         }
 
-        if (!user.getVerificationOtp().equals(otp)) {
-            return "Invalid OTP";
+        // Verify OTP
+        if (!user.getPasswordResetOtp().equals(otp)) {
+            return "Invalid or expired password reset OTP.";
         }
 
-        if (newPassword == null || newPassword.length() < 8) {
-            return "Password must be at least 8 characters";
+        // Validate new password
+        String passwordError = validatePassword(newPassword);
+
+        if (passwordError != null) {
+            return passwordError;
         }
 
+        // Hash and update new password
         user.setPassword(passwordEncoder.encode(newPassword));
 
-        user.setVerificationOtp(null);
-        user.setOtpExpiry(null);
+        // Clear reset OTP after successful reset
+        user.setPasswordResetOtp(null);
+        user.setPasswordResetOtpExpiry(null);
 
         userRepository.save(user);
 
-        return "Password reset successfully";
+        return "Password reset successfully.";
     }
+
+
+
     @Override
     public String verifyMfa(String email, String otp) {
 
@@ -357,5 +373,34 @@ public class UserServiceImpl implements UserService {
         String token = jwtUtil.generateToken(user.getEmail());
 
         return token;
+    }
+
+    private String validatePassword(String password) {
+
+        if (password == null || password.isEmpty()) {
+            return "Password is required";
+        }
+
+        if (password.length() < 8) {
+            return "Password must be at least 8 characters";
+        }
+
+        if (!password.matches(".*[A-Z].*")) {
+            return "Password must contain an uppercase letter";
+        }
+
+        if (!password.matches(".*[a-z].*")) {
+            return "Password must contain a lowercase letter";
+        }
+
+        if (!password.matches(".*[0-9].*")) {
+            return "Password must contain a number";
+        }
+
+        if (!password.matches(".*[^A-Za-z0-9].*")) {
+            return "Password must contain a special character";
+        }
+
+        return null;
     }
 }

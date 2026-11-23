@@ -22,6 +22,12 @@ public class FileController {
     @Autowired
     private FileService fileService;
 
+
+    @GetMapping("/my-files")
+    public ResponseEntity<?> getMyFiles() {
+        return ResponseEntity.ok(fileService.getMyFiles());
+    }
+
     @PostMapping(
             value = "/upload",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -75,23 +81,24 @@ public class FileController {
         }
     }
 
-    @GetMapping("/my-files")
-    public ResponseEntity<?> getMyFiles() {
-        return ResponseEntity.ok(fileService.getMyFiles());
-    }
-
-
     @DeleteMapping("/delete")
     public ResponseEntity<?> deleteFile(
-            @RequestParam("fileId") Long fileId) {
+            @RequestParam("fileId") Long fileId,
+            @RequestParam("password") String password) {
 
         try {
 
-            fileService.deleteFile(fileId);
+            fileService.deleteFile(fileId, password);
 
             return ResponseEntity.ok(
                     "File deleted successfully"
             );
+
+        } catch (InvalidPasswordException e) {
+
+            return ResponseEntity
+                    .status(400)
+                    .body("Invalid encryption password");
 
         } catch (FileAccessDeniedException e) {
 
@@ -101,9 +108,11 @@ public class FileController {
 
         } catch (RuntimeException e) {
 
+            e.printStackTrace();
+
             return ResponseEntity
                     .status(500)
-                    .body("Failed to delete file");
+                    .body("Delete failed: " + e.getMessage());
         }
     }
 }
