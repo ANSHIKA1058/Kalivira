@@ -14,6 +14,10 @@ import com.kalivira.dto.FileResponseDTO;
 import com.kalivira.entity.FileEntity;
 import java.util.List;import com.kalivira.exception.InvalidPasswordException;
 import com.kalivira.exception.FileAccessDeniedException;
+import java.util.Map;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PostMapping;
 
 
 @RestController
@@ -115,4 +119,41 @@ public class FileController {
                     .body("Delete failed: " + e.getMessage());
         }
     }
+
+
+    @PostMapping("/recovery/request-otp")
+    public ResponseEntity<String> requestFileRecoveryOtp() {
+        try {
+            String response = fileService.requestFileRecoveryOtp();
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body("Unable to send recovery OTP");
+        }
+    }
+
+    @PostMapping("/recovery/reset-encryption-password")
+    public ResponseEntity<String> resetFileEncryptionPassword(
+            @RequestBody Map<String, String> request
+    ) {
+        try {
+            String otp = request.get("otp");
+            String newPassword = request.get("newPassword");
+
+            String response = fileService.resetFileEncryptionPassword(
+                    otp,
+                    newPassword
+            );
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body("Unable to reset encryption password");
+        }
+    }
+
 }

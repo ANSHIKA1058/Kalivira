@@ -927,3 +927,334 @@ button {
 .delete-password-toggle:hover {
   color: #625cf5;
 }
+
+
+/* ==============================
+   FILE ENCRYPTION RECOVERY MODAL
+============================== */
+
+.recovery-modal {
+  position: relative;
+  max-width: 490px;
+  width: 100%;
+  padding: 36px;
+  border: 1px solid #e8eaff;
+  animation: recoveryAppear 0.25s ease;
+}
+
+@keyframes recoveryAppear {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.recovery-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 9px;
+  background: #f3f4f6;
+  color: #64748b;
+  font-size: 23px;
+}
+
+.recovery-close:hover {
+  background: #e5e7eb;
+}
+
+.recovery-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: #eef2ff;
+  font-size: 27px;
+}
+
+.recovery-eyebrow {
+  text-align: center;
+  color: #6366f1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  margin-bottom: 9px;
+}
+
+.recovery-modal h2 {
+  text-align: center;
+  color: #172033;
+  font-size: 25px;
+  margin-bottom: 10px;
+}
+
+.recovery-description {
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 370px;
+  margin: 0 auto 25px;
+}
+
+.recovery-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 25px auto 8px;
+  max-width: 190px;
+}
+
+.recovery-step .step {
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e5e7eb;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.recovery-step .step.active {
+  background: #6366f1;
+  color: white;
+  box-shadow: 0 0 0 4px #eef2ff;
+}
+
+.recovery-step .step.completed {
+  background: #059669;
+  color: white;
+}
+
+.step-line {
+  height: 2px;
+  flex: 1;
+  background: #e5e7eb;
+  margin: 0 8px;
+}
+
+.recovery-step-labels {
+  display: flex;
+  justify-content: space-between;
+  max-width: 260px;
+  margin: 0 auto 25px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.recovery-info {
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+  padding: 17px;
+  background: #f5f6ff;
+  border: 1px solid #e0e7ff;
+  border-radius: 11px;
+  margin-bottom: 22px;
+}
+
+.recovery-info-icon {
+  font-size: 23px;
+  color: #6366f1;
+}
+
+.recovery-info strong {
+  display: block;
+  color: #27345a;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.recovery-info p {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.recovery-form label {
+  display: block;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 15px 0 7px;
+}
+
+.recovery-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid #dbe1ea;
+  border-radius: 9px;
+  background: #fff;
+  color: #172033;
+  outline: none;
+  font-size: 13px;
+  transition: 0.2s;
+}
+
+.recovery-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.recovery-otp-input {
+  text-align: center;
+  letter-spacing: 7px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.recovery-password-wrapper {
+  position: relative;
+}
+
+.recovery-password-wrapper .recovery-input {
+  padding-right: 48px;
+}
+
+.recovery-password-wrapper button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 17px;
+  padding: 5px;
+}
+
+.recovery-password-wrapper button:hover {
+  color: #6366f1;
+}
+
+.recovery-password-hint {
+  margin-top: 17px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+}
+
+.recovery-password-hint strong {
+  color: #374151;
+  font-size: 11px;
+}
+
+.recovery-password-hint p,
+.recovery-password-hint li {
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.recovery-password-hint p {
+  margin-top: 5px;
+}
+
+.recovery-password-hint ul {
+  padding-left: 17px;
+  margin-top: 3px;
+}
+
+.recovery-submit {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 20px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.recovery-back-button {
+  display: block;
+  margin: 15px auto 0;
+  border: none;
+  background: transparent;
+  color: #6366f1;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px;
+}
+
+.recovery-back-button:hover {
+  text-decoration: underline;
+}
+
+.recovery-error,
+.recovery-success {
+  padding: 11px 13px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-bottom: 15px;
+  overflow-wrap: anywhere;
+}
+
+.recovery-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.recovery-success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.recovery-footer {
+  border-top: 1px solid #eef0f4;
+  margin-top: 25px;
+  padding-top: 17px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  color: #94a3b8;
+  font-size: 10px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.recovery-cancel {
+  display: block;
+  margin: 13px auto 0;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px;
+}
+
+.recovery-cancel:hover {
+  color: #dc2626;
+}
+
+@media (max-width: 500px) {
+  .recovery-modal {
+    padding: 28px 20px;
+  }
+
+  .recovery-modal h2 {
+    font-size: 21px;
+  }
+
+  .recovery-description {
+    font-size: 12px;
+  }
+}

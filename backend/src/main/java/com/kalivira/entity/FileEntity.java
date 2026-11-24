@@ -65,4 +65,53 @@ public class FileEntity {
     public void setUser(UserEntity user) {
         this.user = user;
     }
+
+    public Integer getEncryptionVersion() {
+        return encryptionVersion;
+    }
+
+    public void setEncryptionVersion(Integer encryptionVersion) {
+        this.encryptionVersion = encryptionVersion;
+    }
+
+    public String getPasswordKeySalt() {
+        return passwordKeySalt;
+    }
+
+    public void setPasswordKeySalt(String passwordKeySalt) {
+        this.passwordKeySalt = passwordKeySalt;
+    }
+
+    public String getPasswordKeyIv() {
+        return passwordKeyIv;
+    }
+
+    public void setPasswordKeyIv(String passwordKeyIv) {
+        this.passwordKeyIv = passwordKeyIv;
+    }
+
+    public String getPasswordWrappedDek() {
+        return passwordWrappedDek;
+    }
+
+    public void setPasswordWrappedDek(String passwordWrappedDek) {
+        this.passwordWrappedDek = passwordWrappedDek;
+    }
+
+    public String getRecoveryKeyIv() {
+        return recoveryKeyIv;
+    }
+
+    public void setRecoveryKeyIv(String recoveryKeyIv) {
+        this.recoveryKeyIv = recoveryKeyIv;
+    }
+
+    public String getRecoveryWrappedDek() {
+        return recoveryWrappedDek;
+    }
+
+    public void setRecoveryWrappedDek(String recoveryWrappedDek) {
+        this.recoveryWrappedDek = recoveryWrappedDek;
+    }
+
 }

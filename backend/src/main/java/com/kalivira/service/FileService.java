@@ -1,10 +1,21 @@
+
 package com.kalivira.service;
+
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import com.kalivira.dto.FileResponseDTO;
+
 public interface FileService {
+
     String uploadFile(MultipartFile file, String password);
+
     byte[] downloadFile(Long fileId, String password);
+
     List<FileResponseDTO> getMyFiles();
-    public void deleteFile(Long fileId, String password);
+
+    void deleteFile(Long fileId, String password);
+
+    String requestFileRecoveryOtp();
+
+    String resetFileEncryptionPassword(String otp, String newPassword);
 }

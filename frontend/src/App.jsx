@@ -69,6 +69,9 @@ function App() {
   const [confirmEncryptionPassword, setConfirmEncryptionPassword] = useState("");
 
 
+const [showRecoveryPassword, setShowRecoveryPassword] = useState(false);
+const [showConfirmRecoveryPassword, setShowConfirmRecoveryPassword] = useState(false);
+
 
   useEffect(() => {
     if (token) {
@@ -1172,70 +1175,230 @@ async function resetFileEncryptionPassword(e) {
 {/* FILE ENCRYPTION PASSWORD RECOVERY MODAL */}
 {showFileRecovery && (
   <div className="modal-overlay">
-    <div className="modal">
-      <h2>Recover Encryption Password</h2>
+    <div className="modal recovery-modal">
 
-      <p>
-        Verify your email using an OTP to reset your file
-        encryption password.
+      <button
+        type="button"
+        className="recovery-close"
+        onClick={() => {
+          setShowFileRecovery(false);
+          setRecoveryOtpSent(false);
+          setRecoveryOtp("");
+          setNewEncryptionPassword("");
+          setConfirmEncryptionPassword("");
+          setShowRecoveryPassword(false);
+          setShowConfirmRecoveryPassword(false);
+          clearMessages();
+        }}
+      >
+        ×
+      </button>
+
+      <div className="recovery-icon">
+        {recoveryOtpSent ? "🔐" : "🛡️"}
+      </div>
+
+      <p className="recovery-eyebrow">
+        KALIVIRA SECURITY
       </p>
 
+      <h2>
+        {recoveryOtpSent
+          ? "Reset Encryption Password"
+          : "Recover Encryption Password"}
+      </h2>
+
+      <p className="recovery-description">
+        {recoveryOtpSent
+          ? "Verify your email with the OTP and create a new password to access your protected files."
+          : "Forgot your file encryption password? Verify your registered email to securely recover access."}
+      </p>
+
+      <div className="recovery-step">
+        <span className={recoveryOtpSent ? "step completed" : "step active"}>
+          1
+        </span>
+        <div className="step-line"></div>
+        <span className={recoveryOtpSent ? "step active" : "step"}>
+          2
+        </span>
+      </div>
+
+      <div className="recovery-step-labels">
+        <span>Email Verification</span>
+        <span>New Password</span>
+      </div>
+
+      {error && (
+        <div className="recovery-error">
+          ✕ {error}
+        </div>
+      )}
+
+      {message && (
+        <div className="recovery-success">
+          ✓ {message}
+        </div>
+      )}
+
       {!recoveryOtpSent ? (
-        <form onSubmit={requestFileRecoveryOtp}>
-          <button type="submit" className="primary-btn">
-            Send Recovery OTP
+        <form
+          className="recovery-form"
+          onSubmit={requestFileRecoveryOtp}
+        >
+          <div className="recovery-info">
+            <span className="recovery-info-icon">✉</span>
+            <div>
+              <strong>Email verification required</strong>
+              <p>
+                A 6-digit OTP will be sent to your registered email address.
+                The OTP is valid for 5 minutes.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="primary-button recovery-submit"
+            disabled={loading}
+          >
+            {loading ? "Sending OTP..." : "Send Recovery OTP →"}
           </button>
         </form>
       ) : (
-        <form onSubmit={resetFileEncryptionPassword}>
+        <form
+          className="recovery-form"
+          onSubmit={resetFileEncryptionPassword}
+        >
+          <label>6-Digit Recovery OTP</label>
+
           <input
+            className="recovery-input recovery-otp-input"
             type="text"
-            placeholder="Enter 6-digit OTP"
+            inputMode="numeric"
+            placeholder="Enter your 6-digit OTP"
             value={recoveryOtp}
-            onChange={(e) => setRecoveryOtp(e.target.value)}
-            maxLength={6}
-            required
-          />
-
-          <input
-            type="password"
-            placeholder="New Encryption Password"
-            value={newEncryptionPassword}
-            onChange={(e) => setNewEncryptionPassword(e.target.value)}
-            required
-          />
-
-          <input
-            type="password"
-            placeholder="Confirm New Encryption Password"
-            value={confirmEncryptionPassword}
             onChange={(e) =>
-              setConfirmEncryptionPassword(e.target.value)
+              setRecoveryOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
             }
+            maxLength={6}
+            autoComplete="one-time-code"
             required
           />
 
-          <button type="submit" className="primary-btn">
-            Reset Encryption Password
+          <div className="recovery-field">
+            <label>New Encryption Password</label>
+
+            <div className="recovery-password-wrapper">
+              <input
+                className="recovery-input"
+                type={showRecoveryPassword ? "text" : "password"}
+                placeholder="Enter new password"
+                value={newEncryptionPassword}
+                onChange={(e) => setNewEncryptionPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowRecoveryPassword(!showRecoveryPassword)}
+                aria-label={showRecoveryPassword ? "Hide password" : "Show password"}
+              >
+                {showRecoveryPassword ? "🙈" : "👁"}
+              </button>
+            </div>
+          </div>
+
+          <div className="recovery-field">
+            <label>Confirm New Password</label>
+
+            <div className="recovery-password-wrapper">
+              <input
+                className="recovery-input"
+                type={showConfirmRecoveryPassword ? "text" : "password"}
+                placeholder="Confirm new password"
+                value={confirmEncryptionPassword}
+                onChange={(e) => setConfirmEncryptionPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowConfirmRecoveryPassword(!showConfirmRecoveryPassword)
+                }
+                aria-label={
+                  showConfirmRecoveryPassword ? "Hide password" : "Show password"
+                }
+              >
+                {showConfirmRecoveryPassword ? "🙈" : "👁"}
+              </button>
+            </div>
+          </div>
+
+          <div className="recovery-password-hint">
+            <strong>Password requirements</strong>
+            <p>At least 8 characters, including:</p>
+            <ul>
+              <li>One uppercase letter</li>
+              <li>One lowercase letter</li>
+              <li>One number</li>
+              <li>One special character</li>
+            </ul>
+          </div>
+
+          <button
+            type="submit"
+            className="primary-button recovery-submit"
+            disabled={loading}
+          >
+            {loading ? "Resetting Password..." : "Reset Encryption Password"}
+          </button>
+
+          <button
+            type="button"
+            className="recovery-back-button"
+            onClick={() => {
+              setRecoveryOtpSent(false);
+              setRecoveryOtp("");
+              clearMessages();
+            }}
+          >
+            ← Back to email verification
           </button>
         </form>
       )}
 
+      <div className="recovery-footer">
+        <span>🔒</span>
+        Your file encryption recovery is protected by email verification.
+      </div>
+
       <button
         type="button"
-        className="text-button"
-        onClick={() => setShowFileRecovery(false)}
+        className="recovery-cancel"
+        onClick={() => {
+          setShowFileRecovery(false);
+          setRecoveryOtpSent(false);
+          setRecoveryOtp("");
+          setNewEncryptionPassword("");
+          setConfirmEncryptionPassword("");
+          clearMessages();
+        }}
       >
         Cancel
       </button>
+
     </div>
   </div>
 )}
-    </div>
-  );
+
+
+</div>
+);
 }
-
-
 
 //=========================================================
 // LOGIN SCREEN COMPONENT
